@@ -322,7 +322,7 @@ namespace Yvm
             case JumpIfFalse:
                 {
                     auto off = stack.pop<64>();
-                    if (stack.pop<64>() == 0) ip = reinterpret_cast<OpCode*>(base) + off;
+                    if (stack.pop<8>() == 0) ip = reinterpret_cast<OpCode*>(base) + off;
                     else ip++;
                     break;
                 }

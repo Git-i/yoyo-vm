@@ -3,7 +3,7 @@
 
 #include "src/yoyo_vm/vm.h"
 #include "src/yoyo_vm/instructions.h"
-
+#include <chrono>
 inline consteval uint8_t to_u8(OpCode c)
 {
     return static_cast<uint8_t>(c);
@@ -102,12 +102,10 @@ int main() {
     ((uint32_t*)a)[23] = 1;
     //-----------------------------
     Yvm::VM vm;
-    for (uint32_t i = 1; i < 15; i++)
-    {
-        Yvm::VM::Type arg1{ .u32 = i };
-        auto output = vm.run_code(a, &arg1, 1);
-        auto value = *reinterpret_cast<int32_t*>(&output);
-        std::cout << value << std::endl;
-    }
-
+    Yvm::VM::Type arg1{ .u32 = 1'000'000 };
+    auto now = std::chrono::high_resolution_clock::now();
+    auto output = vm.run_code(a, &arg1, 1);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(end - now);
+    std::cout << elapsed.count() << "s" << std::endl;
 }
