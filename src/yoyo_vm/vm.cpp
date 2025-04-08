@@ -5,6 +5,30 @@
 
 #include "instructions.h"
 
+#define UNSIGNED_OP(PUSH_TY1, PUSH_TY2, PUSH_TY3, PUSH_TY4, OP) switch (static_cast<uint8_t>(*++ip))\
+                    {\
+                        case  8: stack.push<##PUSH_TY1##>(stack.pop<8>() ##OP## stack.pop<8>()); break;\
+                        case 16: stack.push<##PUSH_TY2##>(stack.pop<16>() ##OP## stack.pop<16>()); break;\
+                        case 32: stack.push<##PUSH_TY3##>(stack.pop<32>() ##OP## stack.pop<32>()); break;\
+                        case 64: stack.push<##PUSH_TY4##>(stack.pop<64>() ##OP## stack.pop<64>()); break;\
+                        default: break;\
+                    }\
+ip++; break;
+//unsigned op same type
+#define UNSIGNED_OP_ST(PUSH_TY, OP) UNSIGNED_OP(PUSH_TY, PUSH_TY, PUSH_TY, PUSH_TY, OP)
+//unsigned op corresponding type
+#define UNSIGNED_OP_CT(OP) UNSIGNED_OP(uint8_t, uint16_t, uint32_t, uint32_t, OP)
+#define SIGNED_OP(PUSH_TY1, PUSH_TY2, PUSH_TY3, PUSH_TY4, OP) switch (static_cast<uint8_t>(*++ip))\
+{\
+case  8: stack.push<##PUSH_TY1##>(stack.pops<8>() ##OP## stack.pops<8>()); break;\
+case 16: stack.push<##PUSH_TY2##>(stack.pops<16>() ##OP## stack.pops<16>()); break;\
+case 32: stack.push<##PUSH_TY3##>(stack.pops<32>() ##OP## stack.pops<32>()); break;\
+case 64: stack.push<##PUSH_TY4##>(stack.pops<64>() ##OP## stack.pops<64>()); break;\
+default: break;\
+}\
+ip++; break;
+#define SIGNED_OP_ST(PUSH_TY, OP) SIGNED_OP(PUSH_TY, PUSH_TY, PUSH_TY, PUSH_TY, OP)
+#define SIGNED_OP_CT(OP) SIGNED_OP(int8_t, int16_t, int32_t, int32_t, OP)
 namespace Yvm
 {
     template<int n>
@@ -30,31 +54,53 @@ namespace Yvm
     template<int n> using fp_t = typename fp<n>::type;
     struct Stack
     {
-        std::array<uint64_t, 256> stack{};
+
+        std::array<VM::Type, 256> stack{};
         size_t top = 0;
         template<int n> in_t<n> pop()
         {
-            return reinterpret_cast<in_t<n>&>(stack[--top]);
+            if constexpr (n == 8) return stack[--top].u8;
+            else if constexpr (n == 16) return stack[--top].u16;
+            else if constexpr (n == 32) return stack[--top].u32;
+            else if constexpr (n == 64) return stack[--top].u64;
+            else static_assert(false, "Invalid integer size");
         }
         template<int n> sin_t<n> pops()
         {
-            return reinterpret_cast<sin_t<n>&>(stack[--top]);
+            if constexpr (n == 8) return stack[--top].i8;
+            else if constexpr (n == 16) return stack[--top].i16;
+            else if constexpr (n == 32) return stack[--top].i32;
+            else if constexpr (n == 64) return stack[--top].i64;
+            else static_assert(false, "Invalid integer size");
         }
         template<int n> fp_t<n> popf()
         {
-            return reinterpret_cast<fp_t<n>&>(stack[--top]);
+            if constexpr (n == 32) return stack[--top].f32;
+            else if constexpr (n == 64) return stack[--top].f64;
+            else static_assert(false, "Invalid integer size");
         }
         template<class T> T*  pop_ptr()
         {
-            return reinterpret_cast<T*>(stack[--top]);
+            return static_cast<T*>(stack[--top].ptr);
         }
         template<typename T>
         void push(const T val)
         {
-            reinterpret_cast<T&>(stack[top++]) = val;
+            auto& top_ref = stack[top++];
+            if constexpr (std::is_same_v<T, int8_t>) top_ref.i8 = val;
+            else if constexpr (std::is_same_v<T, int16_t>) top_ref.i16 = val;
+            else if constexpr (std::is_same_v<T, int32_t>) top_ref.i32 = val;
+            else if constexpr (std::is_same_v<T, int64_t>) top_ref.i64 = val;
+            else if constexpr (std::is_same_v<T, uint8_t>) top_ref.u8 = val;
+            else if constexpr (std::is_same_v<T, uint16_t>) top_ref.u16 = val;
+            else if constexpr (std::is_same_v<T, uint32_t>) top_ref.u32 = val;
+            else if constexpr (std::is_same_v<T, uint64_t>) top_ref.u64 = val;
+            else if constexpr (std::is_same_v<T, float>) top_ref.f32 = val;
+            else if constexpr (std::is_same_v<T, double>) top_ref.f64 = val;
+            else if constexpr (std::is_pointer_v<T>) top_ref.ptr = val;
         }
     };
-    uint64_t VM::run_code(uint64_t* base, const uint64_t* arg_begin, const size_t arg_size) const
+    uint64_t VM::run_code(uint64_t* base, const VM::Type* arg_begin, const size_t arg_size)
     {
         Stack stack;
         // stack data should be trivially copyable
@@ -102,9 +148,6 @@ namespace Yvm
             case FMul64: stack.push(stack.pop<64>() * stack.pop<64>()); ip++; break;
             case FDiv32: stack.push(stack.pop<32>() / stack.pop<32>()); ip++; break;
             case FDiv64: stack.push(stack.pop<64>() / stack.pop<64>()); ip++; break;
-            case Jump:
-            case JumpIf:
-                ip++; break;
             case Ret: return stack.pop<64>();
             case RetVoid: return 0;
             case Constant8: stack.push(static_cast<uint8_t>(*++ip)); ip++; break;
@@ -145,10 +188,64 @@ namespace Yvm
                     auto arg_begin_new = stack.stack.data() + stack.top - arg_size_new;
                     run_code(code, arg_begin_new, arg_size_new);
                 }
-            case Jump:
+            case Jump:  ip = reinterpret_cast<OpCode*>(base) + stack.pop<64>();
+            case CmpEq: { UNSIGNED_OP_ST(uint8_t, ==) }
+            case CmpNe: { UNSIGNED_OP_ST(uint8_t, !=) }
+            case UCmpGt: { UNSIGNED_OP_ST(uint8_t, >) }
+            case UCmpGe: { UNSIGNED_OP_ST(uint8_t, >=) }
+            case UCmpLt: { UNSIGNED_OP_ST(uint8_t, <) }
+            case UCmpLe: { UNSIGNED_OP_ST(uint8_t, <=) }
+            case ICmpGt: { SIGNED_OP_ST(uint8_t, >) }
+            case ICmpGe: { SIGNED_OP_ST(uint8_t, >=) }
+            case ICmpLt: { SIGNED_OP_ST(uint8_t, <) }
+            case ICmpLe: { SIGNED_OP_ST(uint8_t, <=) }
+            case Shl: { UNSIGNED_OP_CT(<<) }
+            case BitAnd: { UNSIGNED_OP_CT(&) }
+            case BitOr: { UNSIGNED_OP_CT(|) }
+            case BitXor: { UNSIGNED_OP_CT(^) }
+            case Alloca: stack.push(stackalloc(stack.pop<64>())); ip++; break;
+            case Load: break;
+            case Store: break;
+            case PtrOff: break;
+            case FNeg32: stack.push(-stack.popf<32>()); ip++; break;
+            case FNeg64: stack.push(-stack.popf<64>()); ip++; break;
+            case Panic: break;
+            case PtrOffConst: break;
+            case Zext:
+                break;
+            case Sext:
+                break;
+            case Trunc:
+                break;
+            case FpConv:
+                break;
+            case FpToSi:
+                break;
+            case FpToUi:
+                break;
+            case UiToFp:
+                break;
+            case SiToFp:
+                break;
+            case JumpIf:
                 {
-
+                    if (stack.pop<64>() != 0) ip = reinterpret_cast<OpCode*>(base) + stack.pop<64>();
+                    else ip++; break;
                 }
+            case FCmpEq:
+                break;
+            case FCmpNe:
+                break;
+            case FCmpGt:
+                break;
+            case FCmpGe:
+                break;
+            case FCmpLt:
+                break;
+            case FCmpLe:
+                break;
+            case Shr:
+                break;
             }
 
         }

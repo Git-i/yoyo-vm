@@ -17,18 +17,6 @@ enum class OpCode : uint8_t {
     FSub32, FSub64,
     FMul32, FMul64,
     FDiv32, FDiv64,
-    // Comparison Operations
-    CmpEq, CmpNe,
-    UCmpGt, UCmpGe, UCmpLt, UCmpLe,
-    ICmpGt, ICmpGe, ICmpLt, ICmpLe,
-    // Bitwise Operations (no sign)
-    Shl8, Shl16, Shl32, Shl64,
-    // right shit if logical not arithmetic
-    Shr8, Shr16, Shr32, Shr64,
-    // I might remove the sized variants and perform on the entire register
-    BitAnd8, BitAnd16, BitAnd32, BitAnd64,
-    BitOr8, BitOr16, BitOr32, BitOr64,
-    BitXor8, BitXor16, BitXor32, BitXor64,
 
     Alloca,
     Load,
@@ -54,6 +42,14 @@ enum class OpCode : uint8_t {
 
     Panic,
     //------2 byte Operations-----------------------------
+    // Comparison Operations
+    CmpEq, CmpNe,
+    UCmpGt, UCmpGe, UCmpLt, UCmpLe,
+    ICmpGt, ICmpGe, ICmpLt, ICmpLe,
+
+    FCmpEq, FCmpNe, FCmpGt, FCmpGe, FCmpLt, FCmpLe,
+    // Bit operations are not too common so we make them two bytes
+    Shl, Shr, BitAnd, BitOr, BitXor,
     //push a value from a constant spot in the stack onto the stack top
     StackAddr,
     /// Offset a pointer by a value specified in the next byte
