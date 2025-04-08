@@ -19,8 +19,7 @@ enum class OpCode : uint8_t {
     FDiv32, FDiv64,
 
     Alloca,
-    Load,
-    Store,
+
     /// Offset a pointer by a value from the stack
     PtrOff,
     // Negation Operations
@@ -30,9 +29,8 @@ enum class OpCode : uint8_t {
     /// the offset is specified in terms of the current function
     Jump,
     //---------------------------------------------------
-    /// pop the stack top, if its non-zero this is equivalent to @c Jump
-    /// else it pops the stack to clear the jump address
-    JumpIf,
+    /// pop the stack top, jumps to that address if the stack top is non zero
+    JumpIfFalse,
     /// Return the top of the stack and go back to the calling function
     Ret,
     /// Equivalent to @code Contant8 0; Ret;@endcode
@@ -54,15 +52,21 @@ enum class OpCode : uint8_t {
     StackAddr,
     /// Offset a pointer by a value specified in the next byte
     PtrOffConst,
+    AllocaConst,
     /// pop the function pointer from the top of the stack
     /// and use the next n stack items as parameters of the function
     /// n is specified as the second byte of the operation
     /// it pops n values from the stack and pushes the result of the call
     Call,
+    // for load and store the next byte specifies the type, it can be one of:
+    // 0 -> i8, 1 -> i16, 2 -> i32, 3 -> i64, 4 -> u8, 5 -> u16, 6 -> u32, 7 -> u64
+    // 8 -> f32, 9 -> f64, 10 -> ptr
+    Load,
+    Store,
     //------3 byte Operations-------------------------------
     // the next byte specifies the size of the source integer
     // and the third byte specifies the size of the destination integer
-    Zext, Sext, Trunc,
+    UConv, SConv,
     FpConv,
     FpToSi, FpToUi, UiToFp, SiToFp,
 };

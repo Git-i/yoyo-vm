@@ -1,5 +1,6 @@
 #include "vm.h"
 
+#include <cassert>
 #include <exception>
 #include <string.h>
 
@@ -7,10 +8,10 @@
 
 #define UNSIGNED_OP(PUSH_TY1, PUSH_TY2, PUSH_TY3, PUSH_TY4, OP) switch (static_cast<uint8_t>(*++ip))\
                     {\
-                        case  8: stack.push<##PUSH_TY1##>(stack.pop<8>() ##OP## stack.pop<8>()); break;\
-                        case 16: stack.push<##PUSH_TY2##>(stack.pop<16>() ##OP## stack.pop<16>()); break;\
-                        case 32: stack.push<##PUSH_TY3##>(stack.pop<32>() ##OP## stack.pop<32>()); break;\
-                        case 64: stack.push<##PUSH_TY4##>(stack.pop<64>() ##OP## stack.pop<64>()); break;\
+                        case  8: stack.push<PUSH_TY1>(stack.pop<8>() OP stack.pop<8>()); break;\
+                        case 16: stack.push<PUSH_TY2>(stack.pop<16>() OP stack.pop<16>()); break;\
+                        case 32: stack.push<PUSH_TY3>(stack.pop<32>() OP stack.pop<32>()); break;\
+                        case 64: stack.push<PUSH_TY4>(stack.pop<64>() OP stack.pop<64>()); break;\
                         default: break;\
                     }\
 ip++; break;
@@ -20,15 +21,19 @@ ip++; break;
 #define UNSIGNED_OP_CT(OP) UNSIGNED_OP(uint8_t, uint16_t, uint32_t, uint32_t, OP)
 #define SIGNED_OP(PUSH_TY1, PUSH_TY2, PUSH_TY3, PUSH_TY4, OP) switch (static_cast<uint8_t>(*++ip))\
 {\
-case  8: stack.push<##PUSH_TY1##>(stack.pops<8>() ##OP## stack.pops<8>()); break;\
-case 16: stack.push<##PUSH_TY2##>(stack.pops<16>() ##OP## stack.pops<16>()); break;\
-case 32: stack.push<##PUSH_TY3##>(stack.pops<32>() ##OP## stack.pops<32>()); break;\
-case 64: stack.push<##PUSH_TY4##>(stack.pops<64>() ##OP## stack.pops<64>()); break;\
+case  8: stack.push<PUSH_TY1>(stack.pops<8>() OP stack.pops<8>()); break;\
+case 16: stack.push<PUSH_TY2>(stack.pops<16>() OP stack.pops<16>()); break;\
+case 32: stack.push<PUSH_TY3>(stack.pops<32>() OP stack.pops<32>()); break;\
+case 64: stack.push<PUSH_TY4>(stack.pops<64>() OP stack.pops<64>()); break;\
 default: break;\
 }\
 ip++; break;
 #define SIGNED_OP_ST(PUSH_TY, OP) SIGNED_OP(PUSH_TY, PUSH_TY, PUSH_TY, PUSH_TY, OP)
 #define SIGNED_OP_CT(OP) SIGNED_OP(int8_t, int16_t, int32_t, int32_t, OP)
+
+#ifndef alloca
+#define alloca(x) stackalloc(x)
+#endif
 namespace Yvm
 {
     template<int n>
@@ -98,6 +103,8 @@ namespace Yvm
             else if constexpr (std::is_same_v<T, float>) top_ref.f32 = val;
             else if constexpr (std::is_same_v<T, double>) top_ref.f64 = val;
             else if constexpr (std::is_pointer_v<T>) top_ref.ptr = val;
+            else if constexpr (std::is_same_v<T, VM::Type>) memcpy(&top_ref, &val, sizeof(T));
+            else static_assert(false, "Invalid push type");
         }
     };
     uint64_t VM::run_code(uint64_t* base, const VM::Type* arg_begin, const size_t arg_size)
@@ -157,7 +164,7 @@ namespace Yvm
                     auto offset =
                         reinterpret_cast<uint8_t*>(++ip) -
                         reinterpret_cast<uint8_t*>(base);
-                    ip += (2 - offset) % 2;
+                    ip += (2 - offset % 2) % 2;
                     stack.push(*reinterpret_cast<uint16_t*>(ip));
                     ip += 2; break;
                 }
@@ -167,7 +174,7 @@ namespace Yvm
                     auto offset =
                         reinterpret_cast<uint8_t*>(++ip) -
                         reinterpret_cast<uint8_t*>(base);
-                    ip += (4 - offset) % 4;
+                    ip += (4 - offset % 4) % 4;
                     stack.push(*reinterpret_cast<uint32_t*>(ip));
                     ip += 4; break;
                 }
@@ -176,7 +183,7 @@ namespace Yvm
                     auto offset =
                         reinterpret_cast<uint8_t*>(++ip) -
                         reinterpret_cast<uint8_t*>(base);
-                    ip += (8 - offset) % 8;
+                    ip += (8 - offset % 8) % 8;
                     stack.push(*reinterpret_cast<uint64_t*>(ip));
                     ip += 8; break;
                 }
@@ -188,7 +195,7 @@ namespace Yvm
                     auto arg_begin_new = stack.stack.data() + stack.top - arg_size_new;
                     run_code(code, arg_begin_new, arg_size_new);
                 }
-            case Jump:  ip = reinterpret_cast<OpCode*>(base) + stack.pop<64>();
+            case Jump:  ip = reinterpret_cast<OpCode*>(base) + stack.pop<64>(); break;
             case CmpEq: { UNSIGNED_OP_ST(uint8_t, ==) }
             case CmpNe: { UNSIGNED_OP_ST(uint8_t, !=) }
             case UCmpGt: { UNSIGNED_OP_ST(uint8_t, >) }
@@ -203,22 +210,107 @@ namespace Yvm
             case BitAnd: { UNSIGNED_OP_CT(&) }
             case BitOr: { UNSIGNED_OP_CT(|) }
             case BitXor: { UNSIGNED_OP_CT(^) }
-            case Alloca: stack.push(stackalloc(stack.pop<64>())); ip++; break;
-            case Load: break;
-            case Store: break;
-            case PtrOff: break;
+            case Alloca: stack.push(alloca(stack.pop<64>())); ip++; break;
+            case AllocaConst: stack.push(alloca(static_cast<uint8_t>(*++ip))); ip++; break;
+            case Load:
+                {
+                    auto ptr = stack.pop_ptr<void>();
+                    switch (static_cast<uint8_t>(*++ip))
+                    {
+                    case 0: stack.push(*static_cast<int8_t*>(ptr)); break;
+                    case 1: stack.push(*static_cast<int16_t*>(ptr)); break;
+                    case 2: stack.push(*static_cast<int32_t*>(ptr)); break;
+                    case 3: stack.push(*static_cast<int64_t*>(ptr)); break;
+                    case 4: stack.push(*static_cast<uint8_t*>(ptr)); break;
+                    case 5: stack.push(*static_cast<uint16_t*>(ptr)); break;
+                    case 6: stack.push(*static_cast<uint32_t*>(ptr)); break;
+                    case 7: stack.push(*static_cast<uint64_t*>(ptr)); break;
+                    case 8: stack.push(*static_cast<float*>(ptr)); break;
+                    case 9: stack.push(*static_cast<double*>(ptr)); break;
+                    case 10: stack.push(ptr); break;
+                    }
+                    ip++; break;
+                }
+            case Store:
+                {
+                    auto ptr = stack.pop_ptr<void>();
+                    switch (static_cast<uint8_t>(*++ip))
+                    {
+                    case 0: *static_cast<int8_t*>(ptr) = stack.pops<8>(); break;
+                    case 1: *static_cast<int16_t*>(ptr) = stack.pops<16>(); break;
+                    case 2: *static_cast<int32_t*>(ptr) = stack.pops<32>(); break;
+                    case 3: *static_cast<int64_t*>(ptr) = stack.pops<64>(); break;
+                    case 4: *static_cast<uint8_t*>(ptr) = stack.pop<8>(); break;
+                    case 5: *static_cast<uint16_t*>(ptr) = stack.pop<16>(); break;
+                    case 6: *static_cast<uint32_t*>(ptr) = stack.pop<32>(); break;
+                    case 7: *static_cast<uint64_t*>(ptr) = stack.pop<64>(); break;
+                    case 8: *static_cast<float*>(ptr) = stack.popf<32>(); break;
+                    case 9: *static_cast<double*>(ptr) = stack.popf<64>(); break;
+                    case 10: *static_cast<void**>(ptr) = stack.pop_ptr<void>(); break;
+                    }
+                    ip++; break;
+                }
+            case PtrOff: stack.push(stack.pop_ptr<uint8_t>() + stack.pop<64>()); ip++; break;
             case FNeg32: stack.push(-stack.popf<32>()); ip++; break;
             case FNeg64: stack.push(-stack.popf<64>()); ip++; break;
             case Panic: break;
-            case PtrOffConst: break;
-            case Zext:
-                break;
-            case Sext:
-                break;
-            case Trunc:
-                break;
+            case PtrOffConst: stack.push(stack.pop_ptr<uint8_t>() + static_cast<uint8_t>(*++ip)); ip++; break;
+            case UConv:
+                {
+#define UNSIGNED_FROM_SWITCH(CODE)\
+    switch (from) {\
+        case 8: CODE (stack.pop<8>()); break;\
+        case 16: CODE (stack.pop<16>()); break;\
+        case 32: CODE (stack.pop<32>()); break;\
+        case 64: CODE (stack.pop<64>()); break;\
+    }
+                    auto from = static_cast<uint8_t>(*++ip);
+                    auto to = static_cast<uint8_t>(*++ip);
+                    switch (to)
+                    {
+                    case 8: UNSIGNED_FROM_SWITCH(stack.push<uint8_t>); break;
+                    case 16: UNSIGNED_FROM_SWITCH(stack.push<uint16_t>) break;
+                    case 32: UNSIGNED_FROM_SWITCH(stack.push<uint32_t>) break;
+                    case 64: UNSIGNED_FROM_SWITCH(stack.push<uint64_t>) break;
+                    }
+                    ip++; break;
+                }
+            case SConv:
+                {
+#define SIGNED_FROM_SWITCH(CODE)\
+    switch (from) {\
+    case 8: CODE (stack.pops<8>()); break;\
+    case 16: CODE (stack.pops<16>()); break;\
+    case 32: CODE (stack.pops<32>()); break;\
+    case 64: CODE (stack.pops<64>()); break;\
+    }
+                    auto from = static_cast<uint8_t>(*++ip);
+                    auto to = static_cast<uint8_t>(*++ip);
+                    switch (to)
+                    {
+                    case 8: UNSIGNED_FROM_SWITCH(stack.push<int8_t>); break;
+                    case 16: UNSIGNED_FROM_SWITCH(stack.push<int16_t>) break;
+                    case 32: UNSIGNED_FROM_SWITCH(stack.push<int32_t>) break;
+                    case 64: UNSIGNED_FROM_SWITCH(stack.push<int64_t>) break;
+                    }
+                    ip++; break;
+                }
             case FpConv:
-                break;
+                {
+#define FP_FROM_SWITCH(CODE)\
+    switch (from) {\
+    case 32: CODE (stack.popf<32>()); break;\
+    case 64: CODE (stack.popf<64>()); break;\
+    }
+                    auto from = static_cast<uint8_t>(*++ip);
+                    auto to = static_cast<uint8_t>(*++ip);
+                    switch (to)
+                    {
+                    case 32: FP_FROM_SWITCH(stack.push<float>) break;
+                    case 64: FP_FROM_SWITCH(stack.push<double>) break;
+                    }
+                    ip++; break;
+                }
             case FpToSi:
                 break;
             case FpToUi:
@@ -227,10 +319,12 @@ namespace Yvm
                 break;
             case SiToFp:
                 break;
-            case JumpIf:
+            case JumpIfFalse:
                 {
-                    if (stack.pop<64>() != 0) ip = reinterpret_cast<OpCode*>(base) + stack.pop<64>();
-                    else ip++; break;
+                    auto off = stack.pop<64>();
+                    if (stack.pop<64>() == 0) ip = reinterpret_cast<OpCode*>(base) + off;
+                    else ip++;
+                    break;
                 }
             case FCmpEq:
                 break;
