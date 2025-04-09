@@ -32,7 +32,9 @@ namespace Yvm
     }
     std::vector<uint64_t> Emitter::get_code() &&
     {
-        return std::move(writer.data);
+        auto vec = std::move(writer.data);
+        writer.data.clear();
+        return vec;
     }
     std::string Emitter::unique_name_from(const std::string& name) const
     {
