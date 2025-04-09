@@ -1,8 +1,8 @@
 #include "vm.h"
-
+#include <array>
 #include <cassert>
 #include <exception>
-#include <string.h>
+#include <cstring>
 
 #include "instructions.h"
 
