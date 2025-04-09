@@ -5,7 +5,8 @@ project('yoyo-vm', 'cpp',
 yoyo_vm = executable('yoyo_vm', [
         'main.cpp',
         'src/yoyo_vm/vm.cpp',
-        'src/yoyo_vm/assembler.cpp'
+        'src/yoyo_vm/assembler.cpp',
+        'src/yoyo_vm/emitter.cpp',
 ])
 
 test('test', yoyo_vm)

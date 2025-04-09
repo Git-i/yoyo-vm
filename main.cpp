@@ -6,6 +6,7 @@
 #include "src/yoyo_vm/assembler.h"
 #include <chrono>
 #include <string.h>
+#include <src/yoyo_vm/emitter.h>
 
 inline consteval uint8_t to_u8(OpCode c)
 {
@@ -22,6 +23,53 @@ int main() {
     // prev -> 2
     // curr -> 3
     // i -> 4
+    Yvm::Emitter em;
+    em.write_alloca(4); em.write_alloca(4);
+    em.write_alloca(4); em.write_alloca(4);
+    em.write_const<uint32_t>(0);
+    em.write_2b_inst(OpCode::StackAddr, 2);
+    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
+    em.write_const<uint32_t>(1);
+    em.write_2b_inst(OpCode::StackAddr, 3);
+    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
+    em.write_const<uint32_t>(1);
+    em.write_2b_inst(OpCode::StackAddr, 4);
+    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
+    auto loop_bg = em.create_label("loop_begin");
+    auto loop_end = em.unq_label_name("loop_end");
+    em.write_2b_inst(OpCode::StackAddr, 0);
+    em.write_2b_inst(OpCode::StackAddr, 4);
+    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
+    em.write_2b_inst(OpCode::ICmpLt, 32);
+    em.create_jump(OpCode::JumpIfFalse, loop_end);
+    em.write_2b_inst(OpCode::StackAddr, 2);
+    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
+    em.write_2b_inst(OpCode::StackAddr, 1);
+    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
+    em.write_2b_inst(OpCode::StackAddr, 3);
+    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
+    em.write_2b_inst(OpCode::StackAddr, 2);
+    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
+    em.write_2b_inst(OpCode::StackAddr, 2);
+    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
+    em.write_2b_inst(OpCode::StackAddr, 1);
+    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
+    em.write_1b_inst(OpCode::Add32);
+    em.write_2b_inst(OpCode::StackAddr, 3);
+    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
+    em.write_2b_inst(OpCode::StackAddr, 4);
+    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
+    em.write_const<uint32_t>(1);
+    em.write_1b_inst(OpCode::Add32);
+    em.write_2b_inst(OpCode::StackAddr, 4);
+    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
+    em.create_jump(OpCode::Jump, loop_bg);
+    em.create_label(loop_end);
+    em.write_2b_inst(OpCode::StackAddr, 3);
+    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
+    em.write_1b_inst(OpCode::Ret);
+
+    em.resolve_jumps();
     auto c = R"(
     ; allocate prev_prev, prev, curr and i
     alloc_const 4
@@ -37,16 +85,16 @@ int main() {
     s_addr 3
     store i32
     ; set i to 1
-    const8 1
+    const32 1
     s_addr 4
     store i32
 
 COND:
     ; i < n
+    s_addr 0
     s_addr 4
     load i32
-    s_addr 0
-    icmp_gt 32
+    icmp_lt 32
     jump_if_f END
 
     ; loop body
@@ -86,90 +134,8 @@ END:
     ret
 )";
     Yvm::Assembler asma;
-    auto asm_code = asma.assemble(c);
-    auto code = std::array{
-        to_u8(OpCode::AllocaConst),4_u8,
-        to_u8(OpCode::AllocaConst),4_u8,
-        to_u8(OpCode::AllocaConst),4_u8,
-        to_u8(OpCode::AllocaConst),4_u8,
-        //---------------------------
-        //initialize
-        to_u8(OpCode::Constant32), 0_u8,
-        0_u8, 0_u8,0_u8, 0_u8, 0_u8, 0_u8,
-        //------------------------------
-        to_u8(OpCode::StackAddr), 2_u8,
-        to_u8(OpCode::Store), 2_u8,
-        to_u8(OpCode::Constant32), 0_u8,0_u8, 0_u8,
-        //------------------------------
-        0_u8, 0_u8, 0_u8, 0_u8,
-        to_u8(OpCode::StackAddr), 3_u8,
-        to_u8(OpCode::Store), 2_u8,
-        //---------------------------------
-        to_u8(OpCode::Constant8), 1_u8,
-        to_u8(OpCode::StackAddr), 4_u8,
-        to_u8(OpCode::Store), 2_u8,
-        // loop condition check
-        to_u8(OpCode::StackAddr), 4_u8,
-        //---------------------------------
-        to_u8(OpCode::Load), 2_u8,
-        to_u8(OpCode::StackAddr), 0_u8,
-        to_u8(OpCode::ICmpGt), 32_u8,
-        to_u8(OpCode::Constant64), 0_u8,
-        //--------------------------------
-        0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, // position 6
-        //--------------------------------
-        to_u8(OpCode::JumpIfFalse),
-        // loop body
-        to_u8(OpCode::StackAddr), 2_u8,
-        to_u8(OpCode::Load), 2_u8,
-        to_u8(OpCode::StackAddr), 1_u8,
-        to_u8(OpCode::Store), 2_u8,
+    auto asm_code = std::move(em).get_code();//asma.assemble(c);
 
-        to_u8(OpCode::StackAddr), 3_u8,
-        to_u8(OpCode::Load), 2_u8,
-        to_u8(OpCode::StackAddr), 2_u8,
-        to_u8(OpCode::Store), 2_u8,
-
-        to_u8(OpCode::StackAddr), 2_u8,
-        to_u8(OpCode::Load), 2_u8,
-        to_u8(OpCode::StackAddr), 1_u8,
-        to_u8(OpCode::Load), 2_u8,
-
-        to_u8(OpCode::Add32),
-
-        to_u8(OpCode::StackAddr), 3_u8,
-        to_u8(OpCode::Store), 2_u8,
-
-        to_u8(OpCode::StackAddr), 4_u8,
-        //----------------------------------
-        to_u8(OpCode::Load), 2_u8,
-        to_u8(OpCode::Constant32), 0_u8,
-        //----------------
-        0_u8, 0_u8, 0_u8, 0_u8, // should be one
-        //-----------------
-        to_u8(OpCode::Add32),
-        to_u8(OpCode::StackAddr), 4_u8,
-        to_u8(OpCode::Store), 2_u8,
-
-        to_u8(OpCode::Constant64), 0_u8, 0_u8,
-        //----------------------------
-        0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
-        //----------------------------
-        to_u8(OpCode::Jump),
-
-        to_u8(OpCode::StackAddr), 3_u8,
-        to_u8(OpCode::Load), 2_u8,
-        to_u8(OpCode::Ret)
-    };
-    uint64_t a[15];
-    memcpy(&a, code.data(), code.size());
-    //set constants-----------------
-    a[6] = code.size() - 5;
-    a[13] = 38;
-    reinterpret_cast<uint32_t*>(a)[6] = 1;
-    ((uint32_t*)a)[23] = 1;
-
-    //-----------------------------
     Yvm::VM vm;
     Yvm::VM::Type arg1{ .u32 = 7 };
     auto now = std::chrono::high_resolution_clock::now();

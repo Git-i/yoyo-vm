@@ -193,7 +193,7 @@ namespace Yvm
                     auto code = stack.pop_ptr<uint64_t>();
                     auto arg_size_new = static_cast<size_t>(*++ip);
                     auto arg_begin_new = stack.stack.data() + stack.top - arg_size_new;
-                    run_code(code, arg_begin_new, arg_size_new);
+                    run_code(code, arg_begin_new, arg_size_new); break;
                 }
             case Jump:  ip = reinterpret_cast<OpCode*>(base) + stack.pop<64>(); break;
             case CmpEq: { UNSIGNED_OP_ST(uint8_t, ==) }
@@ -210,7 +210,7 @@ namespace Yvm
             case BitAnd: { UNSIGNED_OP_CT(&) }
             case BitOr: { UNSIGNED_OP_CT(|) }
             case BitXor: { UNSIGNED_OP_CT(^) }
-            case Alloca: stack.push(alloca(stack.pop<64>())); ip++; break;
+            case Alloca: stack.push(alloca(stack.pop<32>())); ip++; break;
             case AllocaConst: stack.push(alloca(static_cast<uint8_t>(*++ip))); ip++; break;
             case Load:
                 {
