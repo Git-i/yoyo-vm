@@ -14,6 +14,8 @@ namespace Yvm
         u8 = 4, u16 = 5, u32 = 6, u64 = 7,
         f32 = 8, f64 = 9, ptr = 10,
     };
+    /// Utility class to write bytecode
+    /// It handles the weirdness of constant alignment and jump addresses
     class Emitter
     {
         Writer writer;
@@ -23,7 +25,7 @@ namespace Yvm
 
         std::string unique_name_from(const std::string& name) const;
     public:
-                 /// Emit a single byte instruction (eg add32)
+        /// Emit a single byte instruction (eg add32)
         void write_1b_inst(OpCode code);
         /// Emit a 2 byte instruction (eg stackaddr)
         void write_2b_inst(OpCode code, uint8_t arg);
@@ -56,7 +58,8 @@ namespace Yvm
         void resolve_jumps();
         /// Retrieve the code generated so far
         const std::vector<uint64_t>& get_code() const&;
-        /// Move out the code so far
+        /// Move out the code generated so far.
+        ///
         /// Prefer @code std::move(emitter).get_code() @endcode to
         /// @code std::move(emitter.get_code()) @endcode, the former leaves
         /// @c emitter in a valid state to be used again

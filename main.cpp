@@ -17,6 +17,17 @@ uint8_t constexpr operator "" _u8(const unsigned long long v)
 {
     return v;
 }
+void func(uint32_t val, uint32_t val2)
+{
+    std::cout << val << " and " << val2 << std::endl;
+}
+
+Yvm::VM::Type Yvm::do_native_call(void* function, const VM::Type* begin, size_t arg_size, const void* proto)
+{
+    reinterpret_cast<void(*)(uint32_t, uint32_t)>(function)(begin[0].u32, begin[1].u32);
+    return Yvm::VM::Type{};
+}
+
 int main() {
     // n -> 0
     // prev_prev -> 1
@@ -24,52 +35,12 @@ int main() {
     // curr -> 3
     // i -> 4
     Yvm::Emitter em;
-    em.write_alloca(4); em.write_alloca(4);
-    em.write_alloca(4); em.write_alloca(4);
-    em.write_const<uint32_t>(0);
-    em.write_2b_inst(OpCode::StackAddr, 2);
-    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
-    em.write_const<uint32_t>(1);
-    em.write_2b_inst(OpCode::StackAddr, 3);
-    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
-    em.write_const<uint32_t>(1);
-    em.write_2b_inst(OpCode::StackAddr, 4);
-    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
-    auto loop_bg = em.create_label("loop_begin");
-    auto loop_end = em.unq_label_name("loop_end");
-    em.write_2b_inst(OpCode::StackAddr, 0);
-    em.write_2b_inst(OpCode::StackAddr, 4);
-    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
-    em.write_2b_inst(OpCode::ICmpLt, 32);
-    em.create_jump(OpCode::JumpIfFalse, loop_end);
-    em.write_2b_inst(OpCode::StackAddr, 2);
-    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
-    em.write_2b_inst(OpCode::StackAddr, 1);
-    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
-    em.write_2b_inst(OpCode::StackAddr, 3);
-    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
-    em.write_2b_inst(OpCode::StackAddr, 2);
-    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
-    em.write_2b_inst(OpCode::StackAddr, 2);
-    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
-    em.write_2b_inst(OpCode::StackAddr, 1);
-    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
-    em.write_1b_inst(OpCode::Add32);
-    em.write_2b_inst(OpCode::StackAddr, 3);
-    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
-    em.write_2b_inst(OpCode::StackAddr, 4);
-    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
-    em.write_const<uint32_t>(1);
-    em.write_1b_inst(OpCode::Add32);
-    em.write_2b_inst(OpCode::StackAddr, 4);
-    em.write_2b_inst(OpCode::Store, Yvm::Type::i32);
-    em.create_jump(OpCode::Jump, loop_bg);
-    em.create_label(loop_end);
-    em.write_2b_inst(OpCode::StackAddr, 3);
-    em.write_2b_inst(OpCode::Load, Yvm::Type::i32);
+    em.write_const<uint32_t>(10);
+    em.write_const<uint32_t>(200);
+    em.write_const<void*>(nullptr);
+    em.write_const(reinterpret_cast<void*>(&func));
+    em.write_2b_inst(OpCode::NativeCall, 2);
     em.write_1b_inst(OpCode::Ret);
-
-    em.resolve_jumps();
     auto c = R"(
     ; allocate prev_prev, prev, curr and i
     alloc_const 4

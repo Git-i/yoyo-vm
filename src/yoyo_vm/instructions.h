@@ -58,6 +58,11 @@ enum class OpCode : uint8_t {
     /// n is specified as the second byte of the operation
     /// it pops n values from the stack and pushes the result of the call
     Call,
+    /// Similar to call, but it calls a function defined in c/c++ (or anything really)
+    /// with a function pointer at the top of the stack
+    /// the next element on the stack is a pointer to a user defined structure to provide metadata
+    /// to the native call handler
+    NativeCall,
     // for load and store the next byte specifies the type, it can be one of:
     // 0 -> i8, 1 -> i16, 2 -> i32, 3 -> i64, 4 -> u8, 5 -> u16, 6 -> u32, 7 -> u64
     // 8 -> f32, 9 -> f64, 10 -> ptr

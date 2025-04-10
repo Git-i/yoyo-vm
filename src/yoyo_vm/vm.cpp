@@ -60,7 +60,7 @@ namespace Yvm
     struct Stack
     {
 
-        std::array<VM::Type, 256> stack{};
+        VM::Type* stack;
         size_t top = 0;
         template<int n> in_t<n> pop()
         {
@@ -107,11 +107,9 @@ namespace Yvm
             else static_assert(false, "Invalid push type");
         }
     };
-    uint64_t VM::run_code(uint64_t* base, const VM::Type* arg_begin, const size_t arg_size)
+    uint64_t VM::run_code(uint64_t* base, const VM::Type* arg_begin, const size_t arg_size, size_t stack_off)
     {
-        Stack stack;
-        // stack data should be trivially copyable
-        memcpy(stack.stack.data(), arg_begin, arg_size * sizeof(uint64_t));
+        Stack stack{ stack_data.data() + stack_off, 0 };
         stack.top = arg_size;
         auto ip = reinterpret_cast<OpCode*>(base);
         while (true)
@@ -192,8 +190,8 @@ namespace Yvm
                 {
                     auto code = stack.pop_ptr<uint64_t>();
                     auto arg_size_new = static_cast<size_t>(*++ip);
-                    auto arg_begin_new = stack.stack.data() + stack.top - arg_size_new;
-                    run_code(code, arg_begin_new, arg_size_new); break;
+                    auto arg_begin_new = stack.stack + stack.top - arg_size_new;
+                    run_code(code, arg_begin_new, arg_size_new, stack_off + stack.top - arg_size_new); break;
                 }
             case Jump:  ip = reinterpret_cast<OpCode*>(base) + stack.pop<64>(); break;
             case CmpEq: { UNSIGNED_OP_ST(uint8_t, ==) }
@@ -325,6 +323,14 @@ namespace Yvm
                     if (stack.pop<8>() == 0) ip = reinterpret_cast<OpCode*>(base) + off;
                     else ip++;
                     break;
+                }
+            case NativeCall:
+                {
+                    auto code = stack.pop_ptr<void>();
+                    auto proto = stack.pop_ptr<const void>();
+                    auto arg_size_new = static_cast<size_t>(*++ip);
+                    auto arg_begin_new = stack.stack + stack.top - arg_size_new;
+                    stack.push(do_native_call(code, arg_begin_new, arg_size_new, proto));
                 }
             case FCmpEq:
                 break;
