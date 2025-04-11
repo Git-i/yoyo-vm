@@ -5,7 +5,13 @@
 #include <cstring>
 
 #include "instructions.h"
-
+#define FP_OP(PUSH_TY, OP) switch (static_cast<uint8_t>(*++ip))\
+{\
+case 32: stack.push<PUSH_TY>(stack.popf<32>() OP stack.popf<32>()); break;\
+case 64: stack.push<PUSH_TY>(stack.popf<64>() OP stack.popf<64>()); break;\
+default: break;\
+}\
+ip++; break;
 #define UNSIGNED_OP(PUSH_TY1, PUSH_TY2, PUSH_TY3, PUSH_TY4, OP) switch (static_cast<uint8_t>(*++ip))\
                     {\
                         case  8: stack.push<PUSH_TY1>(stack.pop<8>() OP stack.pop<8>()); break;\
@@ -84,9 +90,17 @@ namespace Yvm
             else if constexpr (n == 64) return stack[--top].f64;
             else static_assert(false, "Invalid integer size");
         }
+        VM::Type pop_raw()
+        {
+            return stack[--top];
+        }
         template<class T> T*  pop_ptr()
         {
             return static_cast<T*>(stack[--top].ptr);
+        }
+        template<class T> T*  peek_ptr()
+        {
+            return static_cast<T*>(stack[top - 1].ptr);
         }
         template<typename T>
         void push(const T val)
@@ -107,7 +121,7 @@ namespace Yvm
             else static_assert(false, "Invalid push type");
         }
     };
-    uint64_t VM::run_code(uint64_t* base, const VM::Type* arg_begin, const size_t arg_size, size_t stack_off)
+    VM::Type VMRunner::run_code(uint64_t* base, const VM::Type* arg_begin, const size_t arg_size, size_t stack_off)
     {
         Stack stack{ stack_data.data() + stack_off, 0 };
         stack.top = arg_size;
@@ -153,8 +167,8 @@ namespace Yvm
             case FMul64: stack.push(stack.pop<64>() * stack.pop<64>()); ip++; break;
             case FDiv32: stack.push(stack.pop<32>() / stack.pop<32>()); ip++; break;
             case FDiv64: stack.push(stack.pop<64>() / stack.pop<64>()); ip++; break;
-            case Ret: return stack.pop<64>();
-            case RetVoid: return 0;
+            case Ret: return stack.pop_raw();
+            case RetVoid: return VM::Type{ .u64 = 0 };
             case Constant8: stack.push(static_cast<uint8_t>(*++ip)); ip++; break;
             case Constant16:
                 {
@@ -191,7 +205,11 @@ namespace Yvm
                     auto code = stack.pop_ptr<uint64_t>();
                     auto arg_size_new = static_cast<size_t>(*++ip);
                     auto arg_begin_new = stack.stack + stack.top - arg_size_new;
-                    run_code(code, arg_begin_new, arg_size_new, stack_off + stack.top - arg_size_new); break;
+                    auto new_top = stack.top - arg_size_new;
+                    auto val = run_code(code, arg_begin_new, arg_size_new, stack_off + stack.top - arg_size_new);
+                    stack.top = new_top;
+                    stack.push(val);
+                    break;
                 }
             case Jump:  ip = reinterpret_cast<OpCode*>(base) + stack.pop<64>(); break;
             case CmpEq: { UNSIGNED_OP_ST(uint8_t, ==) }
@@ -205,6 +223,7 @@ namespace Yvm
             case ICmpLt: { SIGNED_OP_ST(uint8_t, <) }
             case ICmpLe: { SIGNED_OP_ST(uint8_t, <=) }
             case Shl: { UNSIGNED_OP_CT(<<) }
+            case Shr: { UNSIGNED_OP_CT(>>) }
             case BitAnd: { UNSIGNED_OP_CT(&) }
             case BitOr: { UNSIGNED_OP_CT(|) }
             case BitXor: { UNSIGNED_OP_CT(^) }
@@ -330,22 +349,41 @@ namespace Yvm
                     auto proto = stack.pop_ptr<const void>();
                     auto arg_size_new = static_cast<size_t>(*++ip);
                     auto arg_begin_new = stack.stack + stack.top - arg_size_new;
-                    stack.push(do_native_call(code, arg_begin_new, arg_size_new, proto));
+                    stack.top -= arg_size_new;
+                    auto val = do_native_call(code, arg_begin_new, arg_size_new, proto);
+                    stack.push(val);
+                    break;
                 }
-            case FCmpEq:
-                break;
-            case FCmpNe:
-                break;
-            case FCmpGt:
-                break;
-            case FCmpGe:
-                break;
-            case FCmpLt:
-                break;
-            case FCmpLe:
-                break;
-            case Shr:
-                break;
+            case RegObj:
+                {
+                    auto destructor = stack.pop_ptr<uint64_t>();
+                    auto obj = stack.peek_ptr<void>();
+                    registered_objects[obj] = destructor;
+                    break;
+                }
+            case CheckReg:
+                {
+                    auto obj = stack.peek_ptr<void>();
+                    stack.push<uint8_t>(registered_objects.contains(obj));
+                    break;
+                }
+            case PopReg:
+                {
+                    auto obj = stack.pop_ptr<void>();
+                    if (auto reg_it = registered_objects.find(obj); reg_it != registered_objects.end())
+                    {
+                        registered_objects.erase(reg_it);
+                        stack.push<uint8_t>(1);
+                    } else stack.push<uint8_t>(0);
+                    break;
+                }
+            case Pop: stack.top--; break;
+            case FCmpEq: { FP_OP(uint8_t, ==) }
+            case FCmpNe: { FP_OP(uint8_t, !=) }
+            case FCmpGt: { FP_OP(uint8_t, >) }
+            case FCmpGe: { FP_OP(uint8_t, >=) }
+            case FCmpLt: { FP_OP(uint8_t, <) }
+            case FCmpLe: { FP_OP(uint8_t, <=) }
             }
 
         }

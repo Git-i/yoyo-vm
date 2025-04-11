@@ -1,13 +1,20 @@
 #pragma once
 #include <cstdint>
 #include <span>
+#include <string>
+#include <unordered_map>
 
 #include "instructions.h"
 
 namespace Yvm
 {
+    class VMRunner;
+    /// Class representing a virtual machine
+    /// note that the vm does not own any code, that would be done by a module system
     class VM
     {
+        std::unordered_map<uint64_t*, std::string> registered_functions;
+        friend class VMRunner;
     public:
         union Type
         {
@@ -18,12 +25,25 @@ namespace Yvm
             float f32; double f64;
             void* ptr;
         };
-        uint64_t run_code(uint64_t* ip, const Type* arg_begin, size_t arg_size, size_t stack_off = 0);
+        /// Construct a @link VMRunner instance
+        VMRunner new_runner();
+    };
+    /// This holds necessary state required to run code
+    /// you can have as many instances of this running at the same time (say on different threads)
+    class VMRunner
+    {
+        explicit VMRunner(const VM& vm): vm(vm) {};
+        const VM& vm;
+        std::unordered_map<void*, uint64_t*> registered_objects;
+    public:
+        VMRunner(VMRunner&&) noexcept = default;
+
+        VM::Type run_code(uint64_t* ip, const VM::Type* arg_begin, size_t arg_size, size_t stack_off = 0);
         // will default to system alloca
         // can probably change it to use a custom stack
         void* stackalloc(uint64_t size);
     private:
-        std::array<Type, 256> stack_data{};
+        std::array<VM::Type, 256> stack_data{};
     };
     /// Implement this if you want to support native calls
     /// @param function the pointer to the function

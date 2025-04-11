@@ -33,12 +33,24 @@ enum class OpCode : uint8_t {
     JumpIfFalse,
     /// Return the top of the stack and go back to the calling function
     Ret,
-    /// Equivalent to @code Contant8 0; Ret;@endcode
+    /// Equivalent to @code Constant64 0; Ret;@endcode
     /// but takes one byte instead of 3
     RetVoid,
     Constant8, Constant16, Constant32, Constant64,
-
+    /// Registers a destructor at the top of the stack
+    /// to an object pointed just below it
+    /// If the object was already registered it replaces the destructor
+    /// @attention Does not pop the object off the stack
+    RegObj,
+    /// Destroy all registered objects and exit the VM
     Panic,
+    /// Check if the top of the stack is registered
+    /// Does not pop it, but it pushes true if it registered
+    CheckReg,
+    /// Similar to @link CheckReg but removes the registration if it existed
+    PopReg,
+    /// Remove the element at the top of the stack
+    Pop,
     //------2 byte Operations-----------------------------
     // Comparison Operations
     CmpEq, CmpNe,

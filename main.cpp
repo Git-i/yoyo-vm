@@ -27,7 +27,11 @@ Yvm::VM::Type Yvm::do_native_call(void* function, const VM::Type* begin, size_t 
     reinterpret_cast<void(*)(uint32_t, uint32_t)>(function)(begin[0].u32, begin[1].u32);
     return Yvm::VM::Type{};
 }
-
+struct Module
+{
+    std::vector<uint64_t> code;
+    std::unordered_map<std::string, uint64_t*> functions;
+};
 int main() {
     // n -> 0
     // prev_prev -> 1
