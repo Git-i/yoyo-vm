@@ -1,6 +1,7 @@
 #pragma once
+#include "common.h"
 #include <cstdint>
-#include <span>
+#include <array>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -13,13 +14,13 @@ namespace Yvm
     /// Class representing a virtual machine
     /// note that the vm does not own any code, that would be done by a module system
 
-    class Module
+    class YVM_API Module
     {
     public:
         std::vector<uint64_t> code;
         std::unordered_map<uint64_t*, std::string> functions;
     };
-    class VM
+    class YVM_API VM
     {
         std::vector<Module*> registered_modules;
         friend class VMRunner;
@@ -38,7 +39,7 @@ namespace Yvm
     };
     /// This holds necessary state required to run code
     /// you can have as many instances of this running at the same time (say on different threads)
-    class VMRunner
+    class YVM_API VMRunner
     {
         explicit VMRunner(const VM& vm): vm(vm) {};
         const VM& vm;

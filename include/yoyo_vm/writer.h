@@ -1,7 +1,11 @@
 #pragma once
+#include "common.h"
+#include <cstdint>
+#include <vector>
+#include "instructions.h"
 namespace Yvm
 {
-    struct Writer
+    struct YVM_API Writer
     {
         std::vector<uint64_t> data;
         size_t byte_off = 0;

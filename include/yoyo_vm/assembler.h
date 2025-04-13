@@ -1,4 +1,5 @@
 #pragma once
+#include "common.h"
 #include <vector>
 #include <string_view>
 #include <cstdint>
@@ -6,7 +7,7 @@
 
 namespace Yvm
 {
-    class Assembler
+    class YVM_API Assembler
     {
         std::unordered_map<std::string_view, uint64_t> jump_addrs;
         std::unordered_map<size_t, std::string_view> unresolved_jumps;

@@ -1,10 +1,10 @@
-#include "vm.h"
+#include "yoyo_vm/vm.h"
 #include <array>
 #include <cassert>
 #include <exception>
 #include <cstring>
 
-#include "instructions.h"
+#include "yoyo_vm/instructions.h"
 #define FP_OP(PUSH_TY, OP) switch (static_cast<uint8_t>(*++ip))\
 {\
 case 32: stack.push<PUSH_TY>(stack.popf<32>() OP stack.popf<32>()); break;\

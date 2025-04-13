@@ -1,4 +1,4 @@
-#include "assembler.h"
+#include "yoyo_vm/assembler.h"
 
 #include <charconv>
 #include <iostream>
@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "instructions.h"
-#include "writer.h"
+#include "yoyo_vm/writer.h"
 namespace Yvm
 {
 

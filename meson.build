@@ -8,6 +8,9 @@ yoyo_vm = library('yoyo_vm', [
         'src/yoyo_vm/emitter.cpp',
     ],
     include_directories:[
-        'include/yoyo_vm'
-    ]
+        'include/'
+    ],
+    cpp_args: ['-DYOYO_VM_DLL']
 )
+
+yoyo_vm_dep = declare_dependency(include_directories: 'include/', link_with: yoyo_vm)

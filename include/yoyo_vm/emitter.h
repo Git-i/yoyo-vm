@@ -1,4 +1,5 @@
 #pragma once
+#include "common.h"
 #include <set>
 #include <unordered_map>
 #include <string>
@@ -16,7 +17,7 @@ namespace Yvm
     };
     /// Utility class to write bytecode
     /// It handles the weirdness of constant alignment and jump addresses
-    class Emitter
+    class YVM_API Emitter
     {
         Writer writer;
         std::unordered_map<std::string, uint64_t> jump_addrs;
