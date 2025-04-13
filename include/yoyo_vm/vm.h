@@ -3,6 +3,7 @@
 #include <span>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "instructions.h"
 
@@ -11,9 +12,16 @@ namespace Yvm
     class VMRunner;
     /// Class representing a virtual machine
     /// note that the vm does not own any code, that would be done by a module system
+
+    class Module
+    {
+    public:
+        std::vector<uint64_t> code;
+        std::unordered_map<uint64_t*, std::string> functions;
+    };
     class VM
     {
-        std::unordered_map<uint64_t*, std::string> registered_functions;
+        std::vector<Module*> registered_modules;
         friend class VMRunner;
     public:
         union Type
