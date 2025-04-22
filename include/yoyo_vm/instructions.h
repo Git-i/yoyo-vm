@@ -18,6 +18,8 @@ namespace Yvm{
         FSub32, FSub64,
         FMul32, FMul64,
         FDiv32, FDiv64,
+
+        Or, And, Not,
     
         Alloca,
     
@@ -33,9 +35,10 @@ namespace Yvm{
         /// pop the stack top, jumps to that address if the stack top is non zero
         JumpIfFalse,
         /// Return the top of the stack and go back to the calling function
+        /// Also calls all registered destructors
         Ret,
         /// Equivalent to @code Constant64 0; Ret;@endcode
-        /// but takes one byte instead of 3
+        /// but takes one byte instead of potentially 17
         RetVoid,
         Constant8, Constant16, Constant32, Constant64,
         /// Registers a destructor at the top of the stack
@@ -52,6 +55,12 @@ namespace Yvm{
         PopReg,
         /// Remove the element at the top of the stack
         Pop,
+        /// Duplicate the element at the stack top
+        Dup,
+        /// Switch the top and second elements
+        Switch,
+        /// Move the top element one slot down replacing what was below it
+        TopConsume,
         //------2 byte Operations-----------------------------
         // Comparison Operations
         CmpEq, CmpNe,
@@ -63,6 +72,9 @@ namespace Yvm{
         Shl, Shr, BitAnd, BitOr, BitXor,
         //push a value from a constant spot in the stack onto the stack top
         StackAddr,
+        /// Similar to @link StackAddr, but the index is reveresed 
+        /// so rev_stack_addr 0 => dup, and rev_stack_addr 1 => switch dup (kind of)
+        RevStackAddr,
         /// Offset a pointer by a value specified in the next byte
         PtrOffConst,
         AllocaConst,

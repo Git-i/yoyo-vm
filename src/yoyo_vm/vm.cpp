@@ -169,6 +169,9 @@ namespace Yvm
             case FDiv64: stack.push(stack.pop<64>() / stack.pop<64>()); ip++; break;
             case Ret: return stack.pop_raw();
             case RetVoid: return VM::Type{ .u64 = 0 };
+            case Or: stack.push<uint8_t>(stack.pop<8>() || stack.pop<8>()); break;
+            case And: stack.push<uint8_t>(stack.pop<8>() && stack.pop<8>()); break;
+            case Not: stack.push<uint8_t>(!stack.pop<8>()); break;
             case Constant8: stack.push(static_cast<uint8_t>(*++ip)); ip++; break;
             case Constant16:
                 {
@@ -200,6 +203,8 @@ namespace Yvm
                     ip += 8; break;
                 }
             case StackAddr: stack.push(stack.stack[static_cast<uint8_t>(*++ip)]); ip++; break;
+            case RevStackAddr: stack.push(stack.stack[stack.top - 1 - static_cast<uint8_t>(*++ip)]); ip++; break;
+            case TopConsume: stack.stack[stack.top - 2] = stack.stack[--stack.top]; break;
             case Call:
                 {
                     auto code = stack.pop_ptr<uint64_t>();
@@ -350,7 +355,7 @@ namespace Yvm
                     auto arg_size_new = static_cast<size_t>(*++ip);
                     auto arg_begin_new = stack.stack + stack.top - arg_size_new;
                     stack.top -= arg_size_new;
-                    auto val = do_native_call(code, arg_begin_new, arg_size_new, proto);
+                    auto val = vm.do_native_call(code, arg_begin_new, arg_size_new, proto);
                     stack.push(val);
                     break;
                 }
@@ -384,6 +389,8 @@ namespace Yvm
             case FCmpGe: { FP_OP(uint8_t, >=) }
             case FCmpLt: { FP_OP(uint8_t, <) }
             case FCmpLe: { FP_OP(uint8_t, <=) }
+            case Dup: stack.push(stack.pop_raw()); break;
+            case Switch: std::swap(stack.stack[stack.top - 1], stack.stack[stack.top - 2]); break;
             }
 
         }

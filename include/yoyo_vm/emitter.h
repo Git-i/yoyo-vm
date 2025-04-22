@@ -21,11 +21,13 @@ namespace Yvm
     {
         Writer writer;
         std::unordered_map<std::string, uint64_t> jump_addrs;
+        std::unordered_map<std::string, size_t> functions;
         std::unordered_map<size_t, std::string> unresolved_jumps;
         std::set<std::string> label_reservations;
 
         std::string unique_name_from(const std::string& name) const;
     public:
+        OpCode last_inst;
         /// Emit a single byte instruction (eg add32)
         void write_1b_inst(OpCode code);
         /// Emit a 2 byte instruction (eg stackaddr)
@@ -47,8 +49,15 @@ namespace Yvm
         /// Create a constant jump to a specified label
         /// Jump is also a 1 byte instruction if you want to use dynamic offsets
         void create_jump(OpCode code, const std::string& label_name);
+        /// register this point as the start of a function
+        void create_function(const std::string& function_name);
+        /// write the address of a function as a constant
+        void write_fn_addr(const std::string& fn_name);
+        /// end the function (it ensures there's a ret)
+        void close_function();
         /// Write alloca_const or alloca based on size
         void write_alloca(uint32_t size);
+        void write_ptr_off(uint32_t size);
         /// Write a constant instruction
         /// @tparam T the type, it must be an integral or floating point type from 1-8 bytes
         template<typename T>

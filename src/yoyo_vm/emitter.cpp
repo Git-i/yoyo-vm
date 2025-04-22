@@ -25,7 +25,34 @@ namespace Yvm
             writer.data[code] = jump_addrs[label];
         }
     }
-
+    void Emitter::create_function(const std::string& function_name)
+    {
+        // functions must be 8 byte aligned
+        writer.byte_off += (8 - writer.byte_off % 8) % 8;
+        if (writer.byte_off >= writer.data.size() * 8) writer.data.push_back(0);
+        functions[function_name] = writer.byte_off / 8;
+    }
+    void Emitter::write_fn_addr(const std::string& fn_name) {
+        // this will be resolved during the linking phase, so we just write a zero
+        write_const<void*>(0);
+    }
+    void Emitter::close_function() {
+        if (last_inst == OpCode::Ret || last_inst == OpCode::RetVoid) return;
+        write_1b_inst(OpCode::Ret);
+    }
+    void Emitter::write_ptr_off(uint32_t off) {
+        // we can statically skip the instruction
+        if (off == 0) return;
+        if (off > std::numeric_limits<uint8_t>::max())
+        {
+            write_const<uint32_t>(off);
+            write_1b_inst(PtrOff);
+        }
+        else
+        {
+            write_2b_inst(PtrOffConst, off);
+        }
+    }
     const std::vector<uint64_t>& Emitter::get_code() const&
     {
         return writer.data;

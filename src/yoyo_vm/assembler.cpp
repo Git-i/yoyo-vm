@@ -5,7 +5,7 @@
 #include <ranges>
 #include <unordered_map>
 
-#include "instructions.h"
+#include "yoyo_vm/instructions.h"
 #include "yoyo_vm/writer.h"
 namespace Yvm
 {

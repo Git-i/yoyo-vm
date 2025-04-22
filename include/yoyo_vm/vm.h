@@ -34,6 +34,16 @@ namespace Yvm
             float f32; double f64;
             void* ptr;
         };
+        /// Implement this if you want to support native calls
+        /// @param function the pointer to the function
+        /// @param begin is start of the argument list, this pointer points to data within the vm stack
+        ///
+        /// @param arg_size this is number of arguments pointed to by @p begin
+        ///
+        /// @param proto this is a user defined pointer from the stack top after @p function is removed,
+        /// it can be anything, it's called @c proto because the common use case is to store a description to the function's
+        /// prototype
+        VM::Type(*do_native_call)(void* function, const VM::Type* begin, size_t arg_size, const void* proto);
         /// Construct a @link VMRunner instance
         VMRunner new_runner();
     };
@@ -54,14 +64,4 @@ namespace Yvm
     private:
         std::array<VM::Type, 256> stack_data{};
     };
-    /// Implement this if you want to support native calls
-    /// @param function the pointer to the function
-    /// @param begin is start of the argument list, this pointer points to data within the vm stack
-    ///
-    /// @param arg_size this is number of arguments pointed to by @p begin
-    ///
-    /// @param proto this is a user defined pointer from the stack top after @p function is removed,
-    /// it can be anything, it's called @c proto because the common use case is to store a description to the function's
-    /// prototype
-    extern VM::Type do_native_call(void* function, const VM::Type* begin, size_t arg_size, const void* proto);
 }
