@@ -6,12 +6,13 @@
 #include <array>
 namespace Yvm 
 {
-    std::string Disassembler::disassemble(std::span<const uint64_t> insts) {
+    std::string Disassembler::disassemble(std::span<const uint64_t> insts, const VM* vm) {
         auto ip = reinterpret_cast<const uint8_t*>(insts.data());
         std::string asm_code;
         auto base = ip;
-        auto write_line = [&asm_code, &ip, base](std::string code) {
-            asm_code += std::format("{:0>10}: {}\n", ip - base, code);
+        auto ip_begin = ip;
+        auto write_line = [&asm_code, &ip_begin, base](std::string code) {
+            asm_code += std::format("{:0>10}: {}\n", ip_begin - base, code);
         };
         auto load_arr = std::array{
             "i8",
@@ -33,7 +34,7 @@ namespace Yvm
         while(
             (ip - base) < 
             static_cast<std::ptrdiff_t>(insts.size() * 8)) {
-            
+            ip_begin = ip;
             switch (static_cast<OpCode>(*ip)) {
             case OpCode::Add8: write_line("add8");     ip++; break;
             case OpCode::Add16: write_line("add16");   ip++; break;
@@ -104,8 +105,21 @@ namespace Yvm
                 // there may be padding bytes because it must be 2 byte aligned
                 auto offset = ++ip - base;
                 ip += (8 - offset % 8) % 8;
-                write_line(std::format("const16 {}", *reinterpret_cast<const uint64_t*>(ip)));
+                write_line(std::format("const64 {}", *reinterpret_cast<const uint64_t*>(ip)));
                 ip += 8; break;
+            }
+            case OpCode::ConstantPtr:
+            {
+                // there may be padding bytes because it must be 2 byte aligned
+                constexpr auto ptr_size = sizeof(void*);
+                auto offset = ++ip - base;
+                ip += (ptr_size - offset % ptr_size) % ptr_size;
+
+                auto ptr = *reinterpret_cast<void* const*>(ip);
+                auto fn_name = vm->name_of(ptr);
+                if (!fn_name.empty()) fn_name = "[[" + fn_name + "]]";
+                write_line(std::format("const ptr {} {}", ptr, fn_name));
+                ip += ptr_size; break;
             }
             case OpCode::RegObj: write_line("reg_obj"); ip++; break;
             case OpCode::Panic: write_line("panic"); ip++; break;

@@ -42,6 +42,47 @@ ip++; break;
 #endif
 namespace Yvm
 {
+
+    void VM::add_module(Module* module)
+    {
+        registered_modules.push_back(module);
+    }
+    std::vector<std::string> VM::link()
+    {
+        std::vector<std::string> result;
+        auto find_symbol = [this](const std::string& name) -> uint64_t* {
+            for (auto mod : registered_modules) {
+                if (mod->code.contains(name)) {
+                    return mod->code.at(name).data();
+                    }
+                }
+            return nullptr;
+            };
+        for (auto module : registered_modules) {
+            for (auto& [addr, name] : module->unresolved_externals) {
+
+                if (auto sym = find_symbol(name)) {
+                    *addr = sym;
+                }
+                else {
+                    result.push_back(name);
+                }
+
+            }
+        }
+        return result;
+    }
+    std::string VM::name_of(void* ptr) const
+    {
+        for (auto mod : registered_modules) {
+            auto it = std::ranges::find_if(mod->code, [ptr](std::pair<const std::string, std::vector<uint64_t>>& data) -> bool {
+                return data.second.data() == ptr;
+                });
+            if (it == mod->code.end()) continue;
+            return it->first;
+        }
+        return "";
+    }
     template<int n>
     struct in {};
     template<int n>
@@ -121,6 +162,10 @@ namespace Yvm
             else static_assert(false, "Invalid push type");
         }
     };
+    VMRunner VM::new_runner()
+    {
+        return VMRunner(*this);
+    }
     VM::Type VMRunner::run_code(uint64_t* base, const VM::Type* arg_begin, const size_t arg_size, size_t stack_off)
     {
         Stack stack{ stack_data.data() + stack_off, 0 };
@@ -202,6 +247,16 @@ namespace Yvm
                     stack.push(*reinterpret_cast<uint64_t*>(ip));
                     ip += 8; break;
                 }
+            case ConstantPtr:
+            {
+                constexpr auto ptr_size = sizeof(void*);
+                auto offset =
+                    reinterpret_cast<uint8_t*>(++ip) -
+                    reinterpret_cast<uint8_t*>(base);
+                ip += (ptr_size - offset % ptr_size) % ptr_size;
+                stack.push(*reinterpret_cast<void**>(ip));
+                ip += ptr_size; break;
+            }
             case StackAddr: stack.push(stack.stack[static_cast<uint8_t>(*++ip)]); ip++; break;
             case RevStackAddr: stack.push(stack.stack[stack.top - 1 - static_cast<uint8_t>(*++ip)]); ip++; break;
             case TopConsume: stack.stack[stack.top - 2] = stack.stack[--stack.top]; break;
@@ -214,6 +269,7 @@ namespace Yvm
                     auto val = run_code(code, arg_begin_new, arg_size_new, stack_off + stack.top - arg_size_new);
                     stack.top = new_top;
                     stack.push(val);
+                    ip++;
                     break;
                 }
             case Jump:  ip = reinterpret_cast<OpCode*>(base) + stack.pop<64>(); break;
@@ -382,15 +438,15 @@ namespace Yvm
                     } else stack.push<uint8_t>(0);
                     break;
                 }
-            case Pop: stack.top--; break;
+            case Pop: stack.top--; ip++; break;
             case FCmpEq: { FP_OP(uint8_t, ==) }
             case FCmpNe: { FP_OP(uint8_t, !=) }
             case FCmpGt: { FP_OP(uint8_t, >) }
             case FCmpGe: { FP_OP(uint8_t, >=) }
             case FCmpLt: { FP_OP(uint8_t, <) }
             case FCmpLe: { FP_OP(uint8_t, <=) }
-            case Dup: stack.push(stack.pop_raw()); break;
-            case Switch: std::swap(stack.stack[stack.top - 1], stack.stack[stack.top - 2]); break;
+            case Dup: stack.push(stack.stack[stack.top - 1]); ip++; break;
+            case Switch: std::swap(stack.stack[stack.top - 1], stack.stack[stack.top - 2]); ip++; break;
             }
 
         }

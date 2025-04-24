@@ -7,6 +7,7 @@
 
 #include "instructions.h"
 #include "writer.h"
+#include "vm.h"
 namespace Yvm
 {
     enum class Type : uint8_t
@@ -21,7 +22,7 @@ namespace Yvm
     {
         Writer writer;
         std::unordered_map<std::string, uint64_t> jump_addrs;
-        std::unordered_map<std::string, size_t> functions;
+        std::vector<std::pair<size_t, std::string>> function_addrs;
         std::unordered_map<size_t, std::string> unresolved_jumps;
         std::set<std::string> label_reservations;
 
@@ -49,12 +50,11 @@ namespace Yvm
         /// Create a constant jump to a specified label
         /// Jump is also a 1 byte instruction if you want to use dynamic offsets
         void create_jump(OpCode code, const std::string& label_name);
-        /// register this point as the start of a function
-        void create_function(const std::string& function_name);
         /// write the address of a function as a constant
         void write_fn_addr(const std::string& fn_name);
         /// end the function (it ensures there's a ret)
-        void close_function();
+        /// and adds it to a module
+        void close_function(Module* mod, const std::string& name);
         /// Write alloca_const or alloca based on size
         void write_alloca(uint32_t size);
         void write_ptr_off(uint32_t size);
@@ -81,7 +81,8 @@ namespace Yvm
     {
         constexpr auto size = sizeof(T);
         static_assert(size == 1 || size == 2 || size == 4 || size == 8, "Invalid constant type");
-        if constexpr (size == 1) write_1b_inst(OpCode::Constant8);
+        if constexpr (std::is_pointer<T>::value) write_1b_inst(OpCode::ConstantPtr);
+        else if constexpr (size == 1) write_1b_inst(OpCode::Constant8);
         else if constexpr (size == 2) write_1b_inst(OpCode::Constant16);
         else if constexpr (size == 4) write_1b_inst(OpCode::Constant32);
         else if constexpr (size == 8) write_1b_inst(OpCode::Constant64);

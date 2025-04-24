@@ -25,20 +25,24 @@ namespace Yvm
             writer.data[code] = jump_addrs[label];
         }
     }
-    void Emitter::create_function(const std::string& function_name)
-    {
-        // functions must be 8 byte aligned
-        writer.byte_off += (8 - writer.byte_off % 8) % 8;
-        if (writer.byte_off >= writer.data.size() * 8) writer.data.push_back(0);
-        functions[function_name] = writer.byte_off / 8;
-    }
     void Emitter::write_fn_addr(const std::string& fn_name) {
-        // this will be resolved during the linking phase, so we just write a zero
         write_const<void*>(0);
+        auto addr = writer.data.size() - 1;
+        function_addrs.emplace_back(addr, fn_name);
     }
-    void Emitter::close_function() {
+    void Emitter::close_function(Module* mod, const std::string& name) {
         if (last_inst == OpCode::Ret || last_inst == OpCode::RetVoid) return;
         write_1b_inst(OpCode::Ret);
+        resolve_jumps();
+        mod->code[name] = std::move(writer.data);
+        auto& this_fn = mod->code[name];
+
+        for (auto& [addr, fn_name] : function_addrs) {
+            mod->unresolved_externals[reinterpret_cast<void**>(&this_fn[addr])] = fn_name;
+        }
+
+        writer.byte_off = 0;
+        writer.data.clear();
     }
     void Emitter::write_ptr_off(uint32_t off) {
         // we can statically skip the instruction

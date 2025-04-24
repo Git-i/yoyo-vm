@@ -17,8 +17,8 @@ namespace Yvm
     class YVM_API Module
     {
     public:
-        std::vector<uint64_t> code;
-        std::unordered_map<uint64_t*, std::string> functions;
+        std::unordered_map<std::string, std::vector<uint64_t>> code;
+        std::unordered_map<void**, std::string> unresolved_externals;
     };
     class YVM_API VM
     {
@@ -46,11 +46,17 @@ namespace Yvm
         VM::Type(*do_native_call)(void* function, const VM::Type* begin, size_t arg_size, const void* proto);
         /// Construct a @link VMRunner instance
         VMRunner new_runner();
+        /// Link all registered modules and resolve external symbols
+        /// Returns a list of unresolved symbols if any
+        std::vector<std::string> link();
+        void add_module(Module* module);
+        std::string name_of(void* ptr) const;
     };
     /// This holds necessary state required to run code
     /// you can have as many instances of this running at the same time (say on different threads)
     class YVM_API VMRunner
     {
+        friend class VM;
         explicit VMRunner(const VM& vm): vm(vm) {};
         const VM& vm;
         std::unordered_map<void*, uint64_t*> registered_objects;
