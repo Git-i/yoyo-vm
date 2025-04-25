@@ -43,7 +43,7 @@ namespace Yvm
         /// @param proto this is a user defined pointer from the stack top after @p function is removed,
         /// it can be anything, it's called @c proto because the common use case is to store a description to the function's
         /// prototype
-        VM::Type(*do_native_call)(void* function, const VM::Type* begin, size_t arg_size, const void* proto);
+        VM::Type(*do_native_call)(void* function, VM::Type* begin, size_t arg_size, void* proto);
         /// Construct a @link VMRunner instance
         VMRunner new_runner();
         /// Link all registered modules and resolve external symbols

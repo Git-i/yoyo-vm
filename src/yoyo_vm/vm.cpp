@@ -407,12 +407,13 @@ namespace Yvm
             case NativeCall:
                 {
                     auto code = stack.pop_ptr<void>();
-                    auto proto = stack.pop_ptr<const void>();
+                    auto proto = stack.pop_ptr<void>();
                     auto arg_size_new = static_cast<size_t>(*++ip);
                     auto arg_begin_new = stack.stack + stack.top - arg_size_new;
                     stack.top -= arg_size_new;
                     auto val = vm.do_native_call(code, arg_begin_new, arg_size_new, proto);
                     stack.push(val);
+                    ip++;
                     break;
                 }
             case RegObj:
