@@ -83,6 +83,10 @@ namespace Yvm
         }
         return "";
     }
+    const char* VM::add_string(std::string str)
+    {
+        return strings.emplace_back(std::move(str)).data();
+    }
     template<int n>
     struct in {};
     template<int n>

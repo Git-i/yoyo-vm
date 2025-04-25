@@ -23,6 +23,7 @@ namespace Yvm
     class YVM_API VM
     {
         std::vector<Module*> registered_modules;
+        std::vector<std::string> strings;
         friend class VMRunner;
     public:
         union Type
@@ -50,6 +51,7 @@ namespace Yvm
         /// Returns a list of unresolved symbols if any
         std::vector<std::string> link();
         void add_module(Module* module);
+        const char* add_string(std::string str);
         std::string name_of(void* ptr) const;
     };
     /// This holds necessary state required to run code

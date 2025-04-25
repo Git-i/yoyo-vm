@@ -16,6 +16,10 @@ namespace Yvm
         u8 = 4, u16 = 5, u32 = 6, u64 = 7,
         f32 = 8, f64 = 9, ptr = 10,
     };
+    struct YVM_API ConstString {
+        const char* data;
+        size_t size;
+    };
     /// Utility class to write bytecode
     /// It handles the weirdness of constant alignment and jump addresses
     class YVM_API Emitter
@@ -52,6 +56,10 @@ namespace Yvm
         void create_jump(OpCode code, const std::string& label_name);
         /// write the address of a function as a constant
         void write_fn_addr(const std::string& fn_name);
+        /// write a pointer to a string constant
+        void write_const_string(const ConstString& str);
+        /// adds a string to the binary
+        ConstString create_const_string(std::string text, VM* code);
         /// end the function (it ensures there's a ret)
         /// and adds it to a module
         void close_function(Module* mod, const std::string& name);
