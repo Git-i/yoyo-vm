@@ -36,6 +36,7 @@ namespace Yvm
             static_cast<std::ptrdiff_t>(insts.size() * 8)) {
             ip_begin = ip;
             switch (static_cast<OpCode>(*ip)) {
+            case OpCode::Nop: write_line("nop"); ip++; break;
             case OpCode::Add8: write_line("add8");     ip++; break;
             case OpCode::Add16: write_line("add16");   ip++; break;
             case OpCode::Add32: write_line("add32");   ip++; break;

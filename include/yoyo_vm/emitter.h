@@ -25,13 +25,16 @@ namespace Yvm
     class YVM_API Emitter
     {
         Writer writer;
+        Writer alloca_writer;
         std::unordered_map<std::string, uint64_t> jump_addrs;
         std::vector<std::pair<size_t, std::string>> function_addrs;
         std::unordered_map<size_t, std::string> unresolved_jumps;
         std::set<std::string> label_reservations;
 
         std::string unique_name_from(const std::string& name) const;
+        bool unify_alloca;
     public:
+        Emitter(bool unify_alloca = true);
         OpCode last_inst;
         /// Emit a single byte instruction (eg add32)
         void write_1b_inst(OpCode code);

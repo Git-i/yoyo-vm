@@ -3,6 +3,7 @@
 
 namespace Yvm{
     enum class OpCode : uint8_t {
+        Nop,
         //-------1 byte Operations-----------------------
         // Integer operations, hopefully we're in two's complement
         Add8, Add16, Add32, Add64,

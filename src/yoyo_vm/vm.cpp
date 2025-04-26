@@ -246,6 +246,7 @@ namespace Yvm
                     stack.push(*reinterpret_cast<uint32_t*>(ip));
                     ip += 4; break;
                 }
+            case Nop: ip++; break;
             case Constant64:
                 {
                     auto offset =
