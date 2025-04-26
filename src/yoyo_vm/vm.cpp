@@ -87,6 +87,10 @@ namespace Yvm
     {
         return strings.emplace_back(std::move(str)).data();
     }
+    bool VM::is_registered_string(const char* text) const
+    {
+        return std::ranges::find_if(strings, [text](const auto& str) { return text == str.data(); }) != strings.end();
+    }
     template<int n>
     struct in {};
     template<int n>
@@ -309,7 +313,7 @@ namespace Yvm
                     case 7: stack.push(*static_cast<uint64_t*>(ptr)); break;
                     case 8: stack.push(*static_cast<float*>(ptr)); break;
                     case 9: stack.push(*static_cast<double*>(ptr)); break;
-                    case 10: stack.push(ptr); break;
+                    case 10: stack.push(*static_cast<void**>(ptr)); break;
                     }
                     ip++; break;
                 }
@@ -433,6 +437,15 @@ namespace Yvm
                     stack.push<uint8_t>(registered_objects.contains(obj));
                     break;
                 }
+            case MemCpy: 
+                {
+                    auto dest = stack.pop_ptr<void>();
+                    auto src = stack.pop_ptr<const void>();
+                    auto size = stack.pop<64>();
+                    memcpy(dest, src, size); ip++; break;
+                }
+            case Malloc: stack.push(malloc(stack.pop<64>())); ip++; break;
+            case Free: free(stack.pop_ptr<void>()); ip++; break;
             case PopReg:
                 {
                     auto obj = stack.pop_ptr<void>();

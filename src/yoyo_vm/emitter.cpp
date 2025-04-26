@@ -32,7 +32,7 @@ namespace Yvm
     }
     void Emitter::close_function(Module* mod, const std::string& name) {
         if (last_inst == OpCode::Ret || last_inst == OpCode::RetVoid) return;
-        write_1b_inst(OpCode::Ret);
+        write_1b_inst(OpCode::RetVoid);
         resolve_jumps();
         mod->code[name] = std::move(writer.data);
         auto& this_fn = mod->code[name];
@@ -56,6 +56,15 @@ namespace Yvm
         {
             write_2b_inst(PtrOffConst, off);
         }
+    }
+    void Emitter::write_const_string(const ConstString& str)
+    {
+        write_const(str.data);
+    }
+    ConstString Emitter::create_const_string(std::string text, VM* code)
+    {
+        auto size = text.size();
+        return ConstString{ code->add_string(std::move(text)), size };
     }
     const std::vector<uint64_t>& Emitter::get_code() const&
     {

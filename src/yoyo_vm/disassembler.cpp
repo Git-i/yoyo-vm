@@ -118,6 +118,14 @@ namespace Yvm
                 auto ptr = *reinterpret_cast<void* const*>(ip);
                 auto fn_name = vm->name_of(ptr);
                 if (!fn_name.empty()) fn_name = "[[" + fn_name + "]]";
+                else if (vm->is_registered_string(reinterpret_cast<const char*>(ptr))) {
+                    fn_name = std::string("\"") + reinterpret_cast<const char*>(ptr) + "\"";
+                    std::string::size_type pos = 0;
+                    while ((pos = fn_name.find("\n", pos)) != std::string::npos) {
+                        fn_name.replace(pos, 1, "\\n");
+                        pos += 2;
+                    }
+                }
                 write_line(std::format("const ptr {} {}", ptr, fn_name));
                 ip += ptr_size; break;
             }
@@ -156,6 +164,9 @@ namespace Yvm
             case OpCode::AllocaConst: write_line(std::format("alloca const {:d}", *++ip)); ip++; break;
             case OpCode::Call: write_line(std::format("call {:d}", *++ip)); ip++; break;
             case OpCode::NativeCall: write_line(std::format("native call {:d}", *++ip)); ip++; break;
+            case OpCode::Malloc: write_line("malloc"); ip++; break;
+            case OpCode::Free: write_line("free"); ip++; break;
+            case OpCode::MemCpy: write_line("memcpy"); ip++; break;
             case OpCode::Load: 
                 write_line(std::format("load {}", load_str(*++ip))); ip++; break;
             case OpCode::Store: 

@@ -52,6 +52,7 @@ namespace Yvm
         std::vector<std::string> link();
         void add_module(Module* module);
         const char* add_string(std::string str);
+        bool is_registered_string(const char*) const;
         std::string name_of(void* ptr) const;
     };
     /// This holds necessary state required to run code

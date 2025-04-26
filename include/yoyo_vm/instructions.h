@@ -22,7 +22,8 @@ namespace Yvm{
         Or, And, Not,
     
         Alloca,
-    
+        /// Pops the the destination, then the source, then the size
+        MemCpy, Malloc, Free,
         /// Offset a pointer by a value from the stack
         PtrOff,
         // Negation Operations
@@ -99,6 +100,7 @@ namespace Yvm{
         UConv, SConv,
         FpConv,
         FpToSi, FpToUi, UiToFp, SiToFp,
+        
     };
 }
 
