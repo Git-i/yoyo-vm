@@ -30,7 +30,7 @@ namespace Yvm
         std::vector<std::pair<size_t, std::string>> function_addrs;
         std::unordered_map<size_t, std::string> unresolved_jumps;
         std::set<std::string> label_reservations;
-
+        size_t last_alloc = 0;
         std::string unique_name_from(const std::string& name) const;
         bool unify_alloca;
     public:
@@ -67,7 +67,8 @@ namespace Yvm
         /// and adds it to a module
         void close_function(Module* mod, const std::string& name);
         /// Write alloca_const or alloca based on size
-        void write_alloca(uint32_t size);
+        /// the return value is the stack addr is using unified alloca's
+        size_t write_alloca(uint32_t size);
         void write_ptr_off(uint32_t size);
         /// Write a constant instruction
         /// @tparam T the type, it must be an integral or floating point type from 1-8 bytes

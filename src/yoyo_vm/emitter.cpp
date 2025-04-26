@@ -5,16 +5,42 @@
 namespace Yvm
 {
     using enum OpCode;
-    void Emitter::write_alloca(uint32_t size)
+    Emitter::Emitter(bool unify_alloc)
+    {
+        unify_alloca = unify_alloc;
+        last_inst = Nop;
+        if (unify_alloc) {
+            create_jump(Jump, unq_label_name("alloca_region")); // no need to store the name, because its guaranteed not to collide
+            create_label("entry");
+        }
+    }
+    size_t Emitter::write_alloca(uint32_t size)
     {
         if (size > std::numeric_limits<uint8_t>::max())
         {
-            write_const<uint32_t>(size);
-            write_1b_inst(Alloca);
+            if (unify_alloca) {
+                alloca_writer.write_n(size);
+                alloca_writer.write_opcode(Alloca);
+                // ensure the allocation is at stack top
+                write_2b_inst(StackAddr, last_alloc);
+                return last_alloc++;
+            }
+            else {
+                write_const(size); write_1b_inst(Alloca);
+                return 0;
+            }
         }
         else
         {
-            write_2b_inst(AllocaConst, size);
+            if (unify_alloca) {
+                alloca_writer.write_opcode(AllocaConst);
+                alloca_writer.write_byte(size);
+                // ensure the allocation is at stack top
+                write_2b_inst(StackAddr, last_alloc);
+                return last_alloc++;
+            }
+            else write_2b_inst(AllocaConst, size);
+            return 0;
         }
     }
 
@@ -33,6 +59,13 @@ namespace Yvm
     void Emitter::close_function(Module* mod, const std::string& name) {
         if (last_inst == OpCode::Ret || last_inst == OpCode::RetVoid) return;
         write_1b_inst(OpCode::RetVoid);
+        if (unify_alloca) {
+            alloca_writer.write_opcode(Constant64);
+            alloca_writer.write_n(jump_addrs["entry"]);
+            alloca_writer.write_opcode(Jump);
+            jump_addrs["alloca_region"] = writer.data.size() * 8;
+            writer.data.insert(writer.data.end(), alloca_writer.data.begin(), alloca_writer.data.end());
+        }
         resolve_jumps();
         mod->code[name] = std::move(writer.data);
         auto& this_fn = mod->code[name];
@@ -43,6 +76,10 @@ namespace Yvm
 
         writer.byte_off = 0;
         writer.data.clear();
+        label_reservations.clear();
+        jump_addrs.clear();
+        alloca_writer.byte_off = 0;
+        alloca_writer.data.clear();
     }
     void Emitter::write_ptr_off(uint32_t off) {
         // we can statically skip the instruction
