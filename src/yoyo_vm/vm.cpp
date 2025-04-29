@@ -42,7 +42,6 @@ ip++; break;
 #endif
 namespace Yvm
 {
-
     void VM::add_module(Module* module)
     {
         registered_modules.push_back(module);
@@ -91,85 +90,7 @@ namespace Yvm
     {
         return std::ranges::find_if(strings, [text](const auto& str) { return text == str.data(); }) != strings.end();
     }
-    template<int n>
-    struct in {};
-    template<int n>
-    struct sin {};
-    template<int n>
-    struct fp {};
-    template<> struct in<8> { using type = uint8_t; };
-    template<> struct in<16> { using type = uint16_t; };
-    template<> struct in<32> { using type = uint32_t; };
-    template<> struct in<64> { using type = uint64_t; };
-
-    template<> struct sin<8> { using type = int8_t; };
-    template<> struct sin<16> { using type = int16_t; };
-    template<> struct sin<32> { using type = int32_t; };
-    template<> struct sin<64> { using type = int64_t; };
-
-    template<> struct fp<32> { using type = float; };
-    template<> struct fp<64> { using type = double; };
-    template<int n> using in_t = typename in<n>::type;
-    template<int n> using sin_t = typename sin<n>::type;
-    template<int n> using fp_t = typename fp<n>::type;
-    struct Stack
-    {
-
-        VM::Type* stack;
-        size_t top = 0;
-        template<int n> in_t<n> pop()
-        {
-            if constexpr (n == 8) return stack[--top].u8;
-            else if constexpr (n == 16) return stack[--top].u16;
-            else if constexpr (n == 32) return stack[--top].u32;
-            else if constexpr (n == 64) return stack[--top].u64;
-            else static_assert(false, "Invalid integer size");
-        }
-        template<int n> sin_t<n> pops()
-        {
-            if constexpr (n == 8) return stack[--top].i8;
-            else if constexpr (n == 16) return stack[--top].i16;
-            else if constexpr (n == 32) return stack[--top].i32;
-            else if constexpr (n == 64) return stack[--top].i64;
-            else static_assert(false, "Invalid integer size");
-        }
-        template<int n> fp_t<n> popf()
-        {
-            if constexpr (n == 32) return stack[--top].f32;
-            else if constexpr (n == 64) return stack[--top].f64;
-            else static_assert(false, "Invalid integer size");
-        }
-        VM::Type pop_raw()
-        {
-            return stack[--top];
-        }
-        template<class T> T*  pop_ptr()
-        {
-            return static_cast<T*>(stack[--top].ptr);
-        }
-        template<class T> T*  peek_ptr()
-        {
-            return static_cast<T*>(stack[top - 1].ptr);
-        }
-        template<typename T>
-        void push(const T val)
-        {
-            auto& top_ref = stack[top++];
-            if constexpr (std::is_same_v<T, int8_t>) top_ref.i8 = val;
-            else if constexpr (std::is_same_v<T, int16_t>) top_ref.i16 = val;
-            else if constexpr (std::is_same_v<T, int32_t>) top_ref.i32 = val;
-            else if constexpr (std::is_same_v<T, int64_t>) top_ref.i64 = val;
-            else if constexpr (std::is_same_v<T, uint8_t>) top_ref.u8 = val;
-            else if constexpr (std::is_same_v<T, uint16_t>) top_ref.u16 = val;
-            else if constexpr (std::is_same_v<T, uint32_t>) top_ref.u32 = val;
-            else if constexpr (std::is_same_v<T, uint64_t>) top_ref.u64 = val;
-            else if constexpr (std::is_same_v<T, float>) top_ref.f32 = val;
-            else if constexpr (std::is_same_v<T, double>) top_ref.f64 = val;
-            else if constexpr (std::is_pointer_v<T>) top_ref.ptr = val;
-            else if constexpr (std::is_same_v<T, VM::Type>) memcpy(&top_ref, &val, sizeof(T));
-            else static_assert(false, "Invalid push type");
-        }
-    };
+    
     VMRunner VM::new_runner()
     {
         return VMRunner(*this);
@@ -268,7 +189,7 @@ namespace Yvm
             }
             case StackAddr: stack.push(stack.stack[static_cast<uint8_t>(*++ip)]); ip++; break;
             case RevStackAddr: stack.push(stack.stack[stack.top - 1 - static_cast<uint8_t>(*++ip)]); ip++; break;
-            case TopConsume: stack.stack[stack.top - 2] = stack.stack[--stack.top]; break;
+            case TopConsume: stack.stack[stack.top - 2] = stack.stack[stack.top - 1]; stack.top--; ip++; break;
             case Call:
                 {
                     auto code = stack.pop_ptr<uint64_t>();
@@ -430,7 +351,7 @@ namespace Yvm
                     auto destructor = stack.pop_ptr<uint64_t>();
                     auto obj = stack.peek_ptr<void>();
                     registered_objects[obj] = destructor;
-                    break;
+                    ip++; break;
                 }
             case CheckReg:
                 {
@@ -449,13 +370,13 @@ namespace Yvm
             case Free: free(stack.pop_ptr<void>()); ip++; break;
             case PopReg:
                 {
-                    auto obj = stack.pop_ptr<void>();
+                    auto obj = stack.peek_ptr<void>();
                     if (auto reg_it = registered_objects.find(obj); reg_it != registered_objects.end())
                     {
                         registered_objects.erase(reg_it);
                         stack.push<uint8_t>(1);
                     } else stack.push<uint8_t>(0);
-                    break;
+                    ip++; break;
                 }
             case Pop: stack.top--; ip++; break;
             case FCmpEq: { FP_OP(uint8_t, ==) }
@@ -466,6 +387,7 @@ namespace Yvm
             case FCmpLe: { FP_OP(uint8_t, <=) }
             case Dup: stack.push(stack.stack[stack.top - 1]); ip++; break;
             case Switch: std::swap(stack.stack[stack.top - 1], stack.stack[stack.top - 2]); ip++; break;
+            case ExternalIntrinsic: vm.intrinsic_handler(stack, static_cast<uint8_t>(*++ip)); ip++; break;
             }
 
         }

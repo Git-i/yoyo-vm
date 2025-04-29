@@ -29,6 +29,9 @@ namespace Yvm{
         PtrOff,
         // Negation Operations
         FNeg32, FNeg64,
+        /// This operation causes the vm to call into the program intrinsic handler
+        /// The program can extend the vm with up to 255 new instruction using the intrinsic handler
+        ExternalIntrinsic,
         /// jump to an offset specified on the stack
         /// the offset must be a 64-byte unsigned integer
         /// the offset is specified in terms of the current function
