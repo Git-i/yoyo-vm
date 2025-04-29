@@ -98,6 +98,14 @@ namespace Yvm
     {
         write_const(str.data);
     }
+    size_t Emitter::last_alloc_addr()
+    {
+        return last_alloc - 1;
+    }
+    void Emitter::add_function_params(size_t n)
+    {
+        last_alloc += n;
+    }
     ConstString Emitter::create_const_string(std::string text, VM* code)
     {
         auto size = text.size();

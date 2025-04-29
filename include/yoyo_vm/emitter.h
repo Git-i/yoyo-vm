@@ -61,6 +61,8 @@ namespace Yvm
         void write_fn_addr(const std::string& fn_name);
         /// write a pointer to a string constant
         void write_const_string(const ConstString& str);
+        size_t last_alloc_addr();
+        void add_function_params(size_t n);
         /// adds a string to the binary
         ConstString create_const_string(std::string text, VM* code);
         /// end the function (it ensures there's a ret)
