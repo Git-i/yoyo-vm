@@ -6,6 +6,7 @@ yoyo_vm = library('yoyo_vm', [
         'src/yoyo_vm/vm.cpp',
         'src/yoyo_vm/assembler.cpp',
         'src/yoyo_vm/emitter.cpp',
+        'src/yoyo_vm/disassembler.cpp',
     ],
     include_directories:[
         'include/'

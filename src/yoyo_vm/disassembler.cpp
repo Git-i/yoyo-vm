@@ -109,6 +109,7 @@ namespace Yvm
                 write_line(std::format("const64 {}", *reinterpret_cast<const uint64_t*>(ip)));
                 ip += 8; break;
             }
+            case OpCode::ExternalIntrinsic: write_line(std::format("extern {:d}", *++ip)); ip++; break;
             case OpCode::ConstantPtr:
             {
                 // there may be padding bytes because it must be 2 byte aligned
