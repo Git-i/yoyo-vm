@@ -109,6 +109,46 @@ namespace Yvm
                 write_line(std::format("const64 {}", *reinterpret_cast<const uint64_t*>(ip)));
                 ip += 8; break;
             }
+            case OpCode::Constant64FromU8: write_line(std::format("const64 from u8 {}", static_cast<uint8_t>(*++ip))); ip++; break;
+            case OpCode::Constant64FromI8: write_line(std::format("const64 from i8 {}",*reinterpret_cast<const int8_t*>(++ip))); ip++; break;
+            case OpCode::Constant64FromI16:
+            {
+                auto offset =
+                    reinterpret_cast<const uint8_t*>(++ip) -
+                    reinterpret_cast<const uint8_t*>(base);
+                ip += (2 - offset % 2) % 2;
+                write_line(std::format("const64 from i16 {}", *reinterpret_cast<const uint16_t*>(ip)));
+                ip += 2; break;
+            }
+            case OpCode::Constant64FromU16:
+            {
+                auto offset =
+                    reinterpret_cast<const uint8_t*>(++ip) -
+                    reinterpret_cast<const uint8_t*>(base);
+                ip += (2 - offset % 2) % 2;
+                write_line(std::format("const64 from u16 {}", *reinterpret_cast<const int16_t*>(ip)));
+                ip += 2; break;
+            }
+            case OpCode::Constant64FromU32:
+            {
+                // there may be padding bytes because it must be 4 byte aligned
+                auto offset =
+                    reinterpret_cast<const uint8_t*>(++ip) -
+                    reinterpret_cast<const uint8_t*>(base);
+                ip += (4 - offset % 4) % 4;
+                write_line(std::format("const64 from u32 {}", *reinterpret_cast<const uint32_t*>(ip)));
+                ip += 4; break;
+            }
+            case OpCode::Constant64FromI32:
+            {
+                // there may be padding bytes because it must be 4 byte aligned
+                auto offset =
+                    reinterpret_cast<const uint8_t*>(++ip) -
+                    reinterpret_cast<const uint8_t*>(base);
+                ip += (4 - offset % 4) % 4;
+                write_line(std::format("const64 from i32 {}", *reinterpret_cast<const int32_t*>(ip)));
+                ip += 4; break;
+            }
             case OpCode::ExternalIntrinsic: write_line(std::format("extern {:d}", *++ip)); ip++; break;
             case OpCode::ConstantPtr:
             {

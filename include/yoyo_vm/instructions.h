@@ -45,7 +45,21 @@ namespace Yvm{
         /// Equivalent to @code Constant64 0; Ret;@endcode
         /// but takes one byte instead of potentially 17
         RetVoid,
-        Constant8, Constant16, Constant32, Constant64, ConstantPtr,
+        Constant8, 
+        Constant16, 
+        Constant32, 
+        Constant64,
+
+        Constant64FromU8,
+        Constant64FromU16,
+        Constant64FromU32,
+        Constant64FromI8,
+        Constant64FromI16,
+        Constant64FromI32,
+
+        ConstantF32,
+        ConstantF64,
+        ConstantPtr,
         /// Registers a destructor at the top of the stack
         /// to an object pointed just below it
         /// If the object was already registered it replaces the destructor

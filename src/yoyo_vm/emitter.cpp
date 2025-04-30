@@ -60,8 +60,8 @@ namespace Yvm
         if (last_inst == OpCode::Ret || last_inst == OpCode::RetVoid) return;
         write_1b_inst(OpCode::RetVoid);
         if (unify_alloca) {
-            alloca_writer.write_opcode(Constant64);
-            alloca_writer.write_n(jump_addrs["entry"]);
+            alloca_writer.write_opcode(Constant64FromU8);
+            alloca_writer.write_n(static_cast<uint8_t>(jump_addrs["entry"]));
             alloca_writer.write_opcode(Jump);
             jump_addrs["alloca_region"] = writer.data.size() * 8;
             writer.data.insert(writer.data.end(), alloca_writer.data.begin(), alloca_writer.data.end());
@@ -181,10 +181,12 @@ namespace Yvm
 
     void Emitter::create_jump(OpCode code, const std::string& label_name)
     {
-        writer.write_opcode(Constant64);
-        if (jump_addrs.contains(label_name)) writer.write_n(jump_addrs[label_name]);
+        if (jump_addrs.contains(label_name)) {
+            write_const(jump_addrs[label_name]);
+        }
         else
         {
+            writer.write_opcode(Constant64);
             writer.write_n<uint64_t>(0);
             auto addr = writer.data.size() - 1;
             unresolved_jumps[addr] = label_name;

@@ -177,6 +177,46 @@ namespace Yvm
                     stack.push(*reinterpret_cast<uint64_t*>(ip));
                     ip += 8; break;
                 }
+            case Constant64FromU8: stack.push<uint64_t>(static_cast<uint8_t>(*++ip)); ip++; break;
+            case Constant64FromI8: stack.push<int64_t>(*reinterpret_cast<int8_t*>(++ip)); ip++; break;
+            case Constant64FromI16:
+            {
+                auto offset =
+                    reinterpret_cast<uint8_t*>(++ip) -
+                    reinterpret_cast<uint8_t*>(base);
+                ip += (2 - offset % 2) % 2;
+                stack.push<uint64_t>(*reinterpret_cast<uint16_t*>(ip));
+                ip += 2; break;
+            }
+            case Constant64FromU16:
+            {
+                auto offset =
+                    reinterpret_cast<uint8_t*>(++ip) -
+                    reinterpret_cast<uint8_t*>(base);
+                ip += (2 - offset % 2) % 2;
+                stack.push<int64_t>(*reinterpret_cast<int16_t*>(ip));
+                ip += 2; break;
+            }
+            case Constant64FromU32:
+            {
+                // there may be padding bytes because it must be 4 byte aligned
+                auto offset =
+                    reinterpret_cast<uint8_t*>(++ip) -
+                    reinterpret_cast<uint8_t*>(base);
+                ip += (4 - offset % 4) % 4;
+                stack.push<uint64_t>(*reinterpret_cast<uint32_t*>(ip));
+                ip += 4; break;
+            }
+            case Constant64FromI32:
+            {
+                // there may be padding bytes because it must be 4 byte aligned
+                auto offset =
+                    reinterpret_cast<uint8_t*>(++ip) -
+                    reinterpret_cast<uint8_t*>(base);
+                ip += (4 - offset % 4) % 4;
+                stack.push<int64_t>(*reinterpret_cast<int32_t*>(ip));
+                ip += 4; break;
+            }
             case ConstantPtr:
             {
                 constexpr auto ptr_size = sizeof(void*);

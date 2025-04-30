@@ -96,10 +96,57 @@ namespace Yvm
         constexpr auto size = sizeof(T);
         static_assert(size == 1 || size == 2 || size == 4 || size == 8, "Invalid constant type");
         if constexpr (std::is_pointer<T>::value) write_1b_inst(OpCode::ConstantPtr);
+        else if constexpr (std::is_same_v<uint64_t, T>)
+        {
+            // utilize optimized constants
+            if (value <= std::numeric_limits<uint8_t>::max()) {
+                write_1b_inst(OpCode::Constant64FromU8);
+                writer.write_n<uint8_t>(value);
+            }
+            else if (value <= std::numeric_limits<uint16_t>::max()) {
+                write_1b_inst(OpCode::Constant64FromU16);
+                writer.write_n<uint16_t>(value);
+            }
+            else if (value <= std::numeric_limits<uint32_t>::max()) {
+                write_1b_inst(OpCode::Constant64FromU32);
+                writer.write_n<uint32_t>(value);
+            }
+            else {
+                write_1b_inst(OpCode::Constant64);
+                writer.write_n<T>(value);
+            }
+            return;
+        }
+        else if constexpr (std::is_same_v<int64_t, T>)
+        {
+            if (value <= std::numeric_limits<int8_t>::max() && value >= std::numeric_limits<int8_t>::min()) {
+                write_1b_inst(OpCode::Constant64FromU8);
+                writer.write_n<int8_t>(value);
+            }
+            else if (value <= std::numeric_limits<int16_t>::max() && value >= std::numeric_limits<int16_t>::min()) {
+                write_1b_inst(OpCode::Constant64FromU16);
+                writer.write_n<int16_t>(value);
+            }
+            else if (value <= std::numeric_limits<int32_t>::max() && value >= std::numeric_limits<int32_t>::min()) {
+                write_1b_inst(OpCode::Constant64FromU32);
+                writer.write_n<int32_t>(value);
+            }
+            else {
+                write_1b_inst(OpCode::Constant64);
+                writer.write_n<T>(value);
+            }
+            return;
+        }
+        else if constexpr (std::is_same_v<float, T>) {
+            write_1b_inst(OpCode::ConstantF32);
+        }
+        else if constexpr (std::is_same_v<double, T>) {
+            write_1b_inst(OpCode::ConstantF64);
+        }
         else if constexpr (size == 1) write_1b_inst(OpCode::Constant8);
         else if constexpr (size == 2) write_1b_inst(OpCode::Constant16);
         else if constexpr (size == 4) write_1b_inst(OpCode::Constant32);
-        else if constexpr (size == 8) write_1b_inst(OpCode::Constant64);
+        else static_assert(false);
         writer.write_n<T>(value);
     }
 }
