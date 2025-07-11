@@ -176,6 +176,7 @@ namespace Yvm
             case OpCode::CheckReg: write_line("check_reg"); ip++; break;
             case OpCode::PopReg: write_line("pop_reg"); ip++; break;
             case OpCode::Pop: write_line("pop"); ip++; break;
+            case OpCode::Checkpoint: write_line(std::format("checkpoint {:d}", *++ip)); ip++; break;
             case OpCode::Dup: write_line("dup"); ip++; break;
             case OpCode::Switch: write_line("switch"); ip++; break;
             case OpCode::TopConsume: write_line("top_consime"); ip++; break;
@@ -202,6 +203,7 @@ namespace Yvm
             case OpCode::BitXor: write_line(std::format("bitxor {:d}", *++ip)); ip++; break;
             case OpCode::StackAddr: write_line(std::format("stackaddr {:d}", *++ip)); ip++; break;
             case OpCode::RevStackAddr: write_line(std::format("stackaddr rev {:d}", *++ip)); ip++; break;
+            case OpCode::StackCheckpoint: write_line(std::format("stackaddr checkpoint {:d}", *++ip)); break;
             case OpCode::PtrOffConst: write_line(std::format("ptroff const {:d}", *++ip)); ip++; break;
             case OpCode::AllocaConst: write_line(std::format("alloca const {:d}", *++ip)); ip++; break;
             case OpCode::Call: write_line(std::format("call {:d}", *++ip)); ip++; break;

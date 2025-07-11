@@ -74,6 +74,8 @@ namespace Yvm{
         PopReg,
         /// Remove the element at the top of the stack
         Pop,
+        /// Mark current top as next checkpoint see @link StackCheckpoint for details
+        Checkpoint,
         /// Duplicate the element at the stack top
         Dup,
         /// Switch the top and second elements
@@ -94,6 +96,9 @@ namespace Yvm{
         /// Similar to @link StackAddr, but the index is reveresed 
         /// so rev_stack_addr 0 => dup, and rev_stack_addr 1 => switch dup (kind of)
         RevStackAddr,
+        /// Used to index value from a specific point in the stack without knowing the index
+        /// You'd first have to make a checkpoint
+        StackCheckpoint,
         /// Offset a pointer by a value specified in the next byte
         PtrOffConst,
         AllocaConst,

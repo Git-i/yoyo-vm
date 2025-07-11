@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
+#include <csetjmp>
 #include "instructions.h"
 
 namespace Yvm
@@ -47,6 +47,7 @@ namespace Yvm
         std::list<std::string> strings;
         friend class VMRunner;
     public:
+        void* ex_data;
         union Type
         {
             uint8_t u8; int8_t i8;
@@ -66,7 +67,7 @@ namespace Yvm
         /// it can be anything, it's called @c proto because the common use case is to store a description to the function's
         /// prototype
         VM::Type(*do_native_call)(void* function, VM::Type* begin, size_t arg_size, void* proto);
-        void(*intrinsic_handler)(Stack& stack, uint8_t instrinsic_number);
+        void(*intrinsic_handler)(Stack& stack, uint8_t instrinsic_number, void* ex_data);
         /// Construct a @link VMRunner instance
         VMRunner new_runner();
         /// Link all registered modules and resolve external symbols
@@ -150,7 +151,6 @@ namespace Yvm
         // will default to system alloca
         // can probably change it to use a custom stack
         void* stackalloc(uint64_t size);
-    private:
         std::array<VM::Type, 256> stack_data{};
     };
 }

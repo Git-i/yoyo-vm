@@ -80,6 +80,9 @@ namespace Yvm
         jump_addrs.clear();
         alloca_writer.byte_off = 0;
         alloca_writer.data.clear();
+        unresolved_jumps.clear();
+        last_alloc = 0;
+        last_checkpoint = 0;
     }
     void Emitter::write_ptr_off(uint32_t off) {
         // we can statically skip the instruction
@@ -102,6 +105,11 @@ namespace Yvm
     {
         return last_alloc - 1;
     }
+    size_t Emitter::checkpoint()
+    {
+        write_2b_inst(OpCode::Checkpoint, last_checkpoint);
+        return last_checkpoint++;
+    }
     void Emitter::add_function_params(size_t n)
     {
         last_alloc += n;
@@ -120,6 +128,10 @@ namespace Yvm
         auto vec = std::move(writer.data);
         writer.data.clear();
         return vec;
+    }
+    std::string& Emitter::get_last_inserted_function()
+    {
+        return function_addrs.back().second;
     }
     std::string Emitter::unique_name_from(const std::string& name) const
     {

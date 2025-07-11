@@ -31,6 +31,7 @@ namespace Yvm
         std::unordered_map<size_t, std::string> unresolved_jumps;
         std::set<std::string> label_reservations;
         size_t last_alloc = 0;
+        size_t last_checkpoint = 0;
         std::string unique_name_from(const std::string& name) const;
         bool unify_alloca;
     public:
@@ -88,6 +89,12 @@ namespace Yvm
         /// @code std::move(emitter.get_code()) @endcode, the former leaves
         /// @c emitter in a valid state to be used again
         std::vector<uint64_t> get_code() &&;
+        /// Get the name of the last function name used in @c write_fn_addr
+        /// The reference is invalidated once the @c write_fn_addr is called again
+        std::string& get_last_inserted_function();
+        /// Insert a stack checkpoint
+        /// and return the index of the inserted checkpoint
+        size_t checkpoint();
     };
 
     template <typename T>

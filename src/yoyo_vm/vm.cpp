@@ -100,6 +100,7 @@ namespace Yvm
         Stack stack{ stack_data.data() + stack_off, 0 };
         stack.top = arg_size;
         auto ip = reinterpret_cast<OpCode*>(base);
+        std::unordered_map<uint32_t, uint32_t> checkpoints;
         while (true)
         {
             switch (*ip)
@@ -229,6 +230,7 @@ namespace Yvm
             }
             case StackAddr: stack.push(stack.stack[static_cast<uint8_t>(*++ip)]); ip++; break;
             case RevStackAddr: stack.push(stack.stack[stack.top - 1 - static_cast<uint8_t>(*++ip)]); ip++; break;
+            case StackCheckpoint: stack.push(stack.stack[checkpoints[static_cast<uint8_t>(*++ip)]]); ip++; break;
             case TopConsume: stack.stack[stack.top - 2] = stack.stack[stack.top - 1]; stack.top--; ip++; break;
             case Call:
                 {
@@ -419,6 +421,7 @@ namespace Yvm
                     ip++; break;
                 }
             case Pop: stack.top--; ip++; break;
+            case Checkpoint: checkpoints[static_cast<uint8_t>(*++ip)] = stack.top - 1; ip++; break;
             case FCmpEq: { FP_OP(uint8_t, ==) }
             case FCmpNe: { FP_OP(uint8_t, !=) }
             case FCmpGt: { FP_OP(uint8_t, >) }
@@ -427,7 +430,7 @@ namespace Yvm
             case FCmpLe: { FP_OP(uint8_t, <=) }
             case Dup: stack.push(stack.stack[stack.top - 1]); ip++; break;
             case Switch: std::swap(stack.stack[stack.top - 1], stack.stack[stack.top - 2]); ip++; break;
-            case ExternalIntrinsic: vm.intrinsic_handler(stack, static_cast<uint8_t>(*++ip)); ip++; break;
+            case ExternalIntrinsic: vm.intrinsic_handler(stack, static_cast<uint8_t>(*++ip), vm.ex_data); ip++; break;
             }
 
         }
