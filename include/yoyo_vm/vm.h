@@ -145,6 +145,7 @@ namespace Yvm
         const VM& vm;
         std::unordered_map<void*, uint64_t*> registered_objects;
     public:
+        bool in_panic = false;
         VMRunner(VMRunner&&) noexcept = default;
 
         VM::Type run_code(uint64_t* ip, const VM::Type* arg_begin, size_t arg_size, size_t stack_off = 0);

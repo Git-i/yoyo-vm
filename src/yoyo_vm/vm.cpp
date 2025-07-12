@@ -239,6 +239,7 @@ namespace Yvm
                     auto arg_begin_new = stack.stack + stack.top - arg_size_new;
                     auto new_top = stack.top - arg_size_new;
                     auto val = run_code(code, arg_begin_new, arg_size_new, stack_off + stack.top - arg_size_new);
+                    if (in_panic) return VM::Type{ .u64 = 0 };
                     stack.top = new_top;
                     stack.push(val);
                     ip++;
@@ -303,7 +304,15 @@ namespace Yvm
             case PtrOff: stack.push(stack.pop_ptr<uint8_t>() + stack.pop<64>()); ip++; break;
             case FNeg32: stack.push(-stack.popf<32>()); ip++; break;
             case FNeg64: stack.push(-stack.popf<64>()); ip++; break;
-            case Panic: break;
+            case Panic: {
+                if (in_panic) return VM::Type{ .u64 = 0 };
+                in_panic = true;
+                for (auto& [obj, destructor] : registered_objects) {
+                    //run_code(destructor)
+                }
+                return VM::Type{ .u64 = 0 };
+                break;
+            }
             case PtrOffConst: stack.push(stack.pop_ptr<uint8_t>() + static_cast<uint8_t>(*++ip)); ip++; break;
             case UConv:
                 {
