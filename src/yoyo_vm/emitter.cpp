@@ -22,7 +22,7 @@ namespace Yvm
                 alloca_writer.write_n(size);
                 alloca_writer.write_opcode(Alloca);
                 // ensure the allocation is at stack top
-                write_2b_inst(StackAddr, last_alloc);
+                write_2b_inst(StackAddr, static_cast<uint8_t>(last_alloc));
                 return last_alloc++;
             }
             else {
@@ -34,12 +34,12 @@ namespace Yvm
         {
             if (unify_alloca) {
                 alloca_writer.write_opcode(AllocaConst);
-                alloca_writer.write_byte(size);
+                alloca_writer.write_byte(static_cast<uint8_t>(size));
                 // ensure the allocation is at stack top
-                write_2b_inst(StackAddr, last_alloc);
+                write_2b_inst(StackAddr, static_cast<uint8_t>(last_alloc));
                 return last_alloc++;
             }
-            else write_2b_inst(AllocaConst, size);
+            else write_2b_inst(AllocaConst, static_cast<uint8_t>(size));
             return 0;
         }
     }
@@ -94,7 +94,7 @@ namespace Yvm
         }
         else
         {
-            write_2b_inst(PtrOffConst, off);
+            write_2b_inst(PtrOffConst, static_cast<uint8_t>(off));
         }
     }
     void Emitter::write_const_string(const ConstString& str)
@@ -107,7 +107,7 @@ namespace Yvm
     }
     size_t Emitter::checkpoint()
     {
-        write_2b_inst(OpCode::Checkpoint, last_checkpoint);
+        write_2b_inst(OpCode::Checkpoint, static_cast<uint8_t>(last_checkpoint));
         return last_checkpoint++;
     }
     void Emitter::add_function_params(size_t n)

@@ -149,6 +149,24 @@ namespace Yvm
                 write_line(std::format("const64 from i32 {}", *reinterpret_cast<const int32_t*>(ip)));
                 ip += 4; break;
             }
+            case OpCode::ConstantF32:
+            {
+                auto offset =
+                    reinterpret_cast<const uint8_t*>(++ip) -
+                    reinterpret_cast<const uint8_t*>(base);
+                ip += (4 - offset % 4) % 4;
+                write_line(std::format("const f32 {}", *reinterpret_cast<const float*>(ip)));
+                ip += 4; break;
+            }
+            case OpCode::ConstantF64:
+            {
+                auto offset =
+                    reinterpret_cast<const uint8_t*>(++ip) -
+                    reinterpret_cast<const uint8_t*>(base);
+                ip += (8 - offset % 8) % 8;
+                write_line(std::format("const f64 {}", *reinterpret_cast<const double*>(ip)));
+                ip += 8; break;
+            }
             case OpCode::ExternalIntrinsic: write_line(std::format("extern {:d}", *++ip)); ip++; break;
             case OpCode::ConstantPtr:
             {

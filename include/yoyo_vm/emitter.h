@@ -108,15 +108,15 @@ namespace Yvm
             // utilize optimized constants
             if (value <= std::numeric_limits<uint8_t>::max()) {
                 write_1b_inst(OpCode::Constant64FromU8);
-                writer.write_n<uint8_t>(value);
+                writer.write_n<uint8_t>(static_cast<uint8_t>(value));
             }
             else if (value <= std::numeric_limits<uint16_t>::max()) {
                 write_1b_inst(OpCode::Constant64FromU16);
-                writer.write_n<uint16_t>(value);
+                writer.write_n<uint16_t>(static_cast<uint16_t>(value));
             }
             else if (value <= std::numeric_limits<uint32_t>::max()) {
                 write_1b_inst(OpCode::Constant64FromU32);
-                writer.write_n<uint32_t>(value);
+                writer.write_n<uint32_t>(static_cast<uint32_t>(value));
             }
             else {
                 write_1b_inst(OpCode::Constant64);

@@ -134,14 +134,14 @@ namespace Yvm
             case URem16: stack.push(stack.pop<16>() % stack.pop<16>()); ip++; break;
             case URem32: stack.push(stack.pop<32>() % stack.pop<32>()); ip++; break;
             case URem64: stack.push(stack.pop<64>() % stack.pop<64>()); ip++; break;
-            case FAdd32: stack.push(stack.pop<32>() + stack.pop<32>()); ip++; break;
-            case FAdd64: stack.push(stack.pop<64>() + stack.pop<64>()); ip++; break;
-            case FSub32: stack.push(stack.pop<32>() - stack.pop<32>()); ip++; break;
-            case FSub64: stack.push(stack.pop<64>() - stack.pop<64>()); ip++; break;
-            case FMul32: stack.push(stack.pop<32>() * stack.pop<32>()); ip++; break;
-            case FMul64: stack.push(stack.pop<64>() * stack.pop<64>()); ip++; break;
-            case FDiv32: stack.push(stack.pop<32>() / stack.pop<32>()); ip++; break;
-            case FDiv64: stack.push(stack.pop<64>() / stack.pop<64>()); ip++; break;
+            case FAdd32: stack.push(stack.popf<32>() + stack.popf<32>()); ip++; break;
+            case FAdd64: stack.push(stack.popf<64>() + stack.popf<64>()); ip++; break;
+            case FSub32: stack.push(stack.popf<32>() - stack.popf<32>()); ip++; break;
+            case FSub64: stack.push(stack.popf<64>() - stack.popf<64>()); ip++; break;
+            case FMul32: stack.push(stack.popf<32>() * stack.popf<32>()); ip++; break;
+            case FMul64: stack.push(stack.popf<64>() * stack.popf<64>()); ip++; break;
+            case FDiv32: stack.push(stack.popf<32>() / stack.popf<32>()); ip++; break;
+            case FDiv64: stack.push(stack.popf<64>() / stack.popf<64>()); ip++; break;
             case Ret: return stack.pop_raw();
             case RetVoid: return VM::Type{ .u64 = 0 };
             case Or: stack.push<uint8_t>(stack.pop<8>() || stack.pop<8>()); break;
@@ -227,6 +227,24 @@ namespace Yvm
                 ip += (ptr_size - offset % ptr_size) % ptr_size;
                 stack.push(*reinterpret_cast<void**>(ip));
                 ip += ptr_size; break;
+            }
+            case ConstantF32:
+            {
+                auto offset =
+                    reinterpret_cast<uint8_t*>(++ip) -
+                    reinterpret_cast<uint8_t*>(base);
+                ip += (4 - offset % 4) % 4;
+                stack.push(*reinterpret_cast<float*>(ip));
+                ip += 4; break;
+            }
+            case ConstantF64:
+            {
+                auto offset =
+                    reinterpret_cast<uint8_t*>(++ip) -
+                    reinterpret_cast<uint8_t*>(base);
+                ip += (8 - offset % 8) % 8;
+                stack.push(*reinterpret_cast<double*>(ip));
+                ip += 8; break;
             }
             case StackAddr: stack.push(stack.stack[static_cast<uint8_t>(*++ip)]); ip++; break;
             case RevStackAddr: stack.push(stack.stack[stack.top - 1 - static_cast<uint8_t>(*++ip)]); ip++; break;
@@ -430,7 +448,7 @@ namespace Yvm
                     ip++; break;
                 }
             case Pop: stack.top--; ip++; break;
-            case Checkpoint: checkpoints[static_cast<uint8_t>(*++ip)] = stack.top - 1; ip++; break;
+            case Checkpoint: checkpoints[static_cast<uint8_t>(*++ip)] = static_cast<uint32_t>(stack.top - 1); ip++; break;
             case FCmpEq: { FP_OP(uint8_t, ==) }
             case FCmpNe: { FP_OP(uint8_t, !=) }
             case FCmpGt: { FP_OP(uint8_t, >) }
